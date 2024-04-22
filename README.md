@@ -164,9 +164,9 @@ Distributed under the MIT License. See `LICENSE` for more information.
 
 ## Contact
 
-[Carlos Uziel Pérez Malla](https://perez-malla.com/)
+ Raheleh Sheibani Tezerji [[GitHub](https://github.com/Rahel14350) - [Google Scholar](https://scholar.google.com/citations?user=yblPwXoAAAAJ&hl=en) - [LinkedIn](https://www.linkedin.com/in/raheleh-sheibani-tezerji-62239693/)]
 
-[GitHub](https://github.com/CarlosUziel) - [Google Scholar](https://scholar.google.es/citations?user=tEz_OeIAAAAJ&hl=es&oi=ao) - [LinkedIn](https://at.linkedin.com/in/carlos-uziel-p%C3%A9rez-malla-323aa5124) - [Twitter](https://twitter.com/perez_malla)
+Carlos Uziel Pérez Malla [[GitHub](https://github.com/CarlosUziel) - [Google Scholar](https://scholar.google.es/citations?user=tEz_OeIAAAAJ&hl=es&oi=ao) - [LinkedIn](https://www.linkedin.com/in/carlosuziel) - [Twitter](https://twitter.com/perez_malla) - [Website](https://perez-malla.com/)]
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
