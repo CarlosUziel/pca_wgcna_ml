@@ -3,7 +3,7 @@
 <!-- PROJECT LOGO -->
 <br />
 <div align="center">
-  <img src="docs/1_workflow.png" alt="Workflow diagram" width="600" height="200">
+  <img src="docs/1_workflow.png" alt="Workflow diagram" width="600" height="150">
 
   <h1 align="center">Revealing Prostate Cancer Progression</h1>
   <h4 align="center">A Bioinformatics Fusion of Weighted Correlation Network Analysis and Machine Learning</h4>
