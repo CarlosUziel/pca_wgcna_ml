@@ -1,0 +1,7 @@
+{
+  "criterion": ["gini", "entropy"],
+  "max_depth": [4, 8, 16],
+  "max_features": ["sqrt", "log2"],
+  "class_weight": ["balanced", null],
+  "ccp_alpha": [0, 0.1, 0.2]
+}

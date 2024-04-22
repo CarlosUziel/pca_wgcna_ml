@@ -1,0 +1,91 @@
+<mxfile host="65bd71144e" scale="5" border="0">
+    <diagram name="Page-1" id="01cco4ndJcUQCTYk437v">
+        <mxGraphModel dx="719" dy="358" grid="1" gridSize="13" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="CX0fh3aHdGGXFl5mxuPn-5" value="&lt;div style=&quot;font-size: 13px;&quot;&gt;&lt;font style=&quot;font-size: 18px;&quot;&gt;I&lt;/font&gt;&lt;/div&gt;&lt;div style=&quot;font-size: 1px;&quot;&gt;&lt;br&gt;&lt;/div&gt;&lt;div style=&quot;font-size: 16px;&quot;&gt;&lt;span style=&quot;font-weight: normal;&quot;&gt;Data Processing&lt;/span&gt;&lt;br&gt;&lt;/div&gt;" style="swimlane;whiteSpace=wrap;html=1;rounded=1;startSize=52;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=2;shadow=0;glass=0;" parent="1" vertex="1">
+                    <mxGeometry x="13" y="52" width="208" height="234" as="geometry"/>
+                </mxCell>
+                <mxCell id="CX0fh3aHdGGXFl5mxuPn-11" value="&lt;div style=&quot;font-size: 13px;&quot;&gt;Pre-processing, integration of samples and removal of replicates.&lt;br style=&quot;font-size: 13px;&quot;&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;" parent="CX0fh3aHdGGXFl5mxuPn-5" vertex="1">
+                    <mxGeometry x="13" y="156" width="182" height="65" as="geometry"/>
+                </mxCell>
+                <mxCell id="CX0fh3aHdGGXFl5mxuPn-20" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="CX0fh3aHdGGXFl5mxuPn-5" source="CX0fh3aHdGGXFl5mxuPn-10" target="CX0fh3aHdGGXFl5mxuPn-11" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="CX0fh3aHdGGXFl5mxuPn-10" value="&lt;div style=&quot;font-size: 13px;&quot;&gt;&lt;b style=&quot;font-size: 13px;&quot;&gt;TCGA-PRAD + SU2C-PCF&lt;/b&gt;&lt;/div&gt;&lt;div style=&quot;font-size: 13px;&quot;&gt;&lt;b style=&quot;font-size: 13px;&quot;&gt;&lt;br style=&quot;font-size: 13px;&quot;&gt;&lt;/b&gt;&lt;/div&gt;&lt;div style=&quot;font-size: 13px;&quot;&gt;(500 prim, 57 met)&lt;br style=&quot;font-size: 13px;&quot;&gt;&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;shadow=1;strokeWidth=2;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;" parent="CX0fh3aHdGGXFl5mxuPn-5" vertex="1">
+                    <mxGeometry x="13" y="65" width="182" height="65" as="geometry"/>
+                </mxCell>
+                <mxCell id="CX0fh3aHdGGXFl5mxuPn-6" value="&lt;div style=&quot;font-size: 13px;&quot;&gt;&lt;font style=&quot;font-size: 18px;&quot;&gt;II&lt;/font&gt;&lt;/div&gt;&lt;div style=&quot;font-size: 1px;&quot;&gt;&lt;br&gt;&lt;/div&gt;&lt;div style=&quot;font-size: 16px;&quot;&gt;&lt;span style=&quot;font-weight: normal;&quot;&gt;Differential Analysis&lt;/span&gt;&lt;br&gt;&lt;/div&gt;" style="swimlane;whiteSpace=wrap;html=1;rounded=1;startSize=52;fillColor=#d5e8d4;strokeColor=#82b366;strokeWidth=2;shadow=0;glass=0;" parent="1" vertex="1">
+                    <mxGeometry x="234" y="52" width="208" height="234" as="geometry"/>
+                </mxCell>
+                <mxCell id="CX0fh3aHdGGXFl5mxuPn-22" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="CX0fh3aHdGGXFl5mxuPn-6" source="CX0fh3aHdGGXFl5mxuPn-12" target="CX0fh3aHdGGXFl5mxuPn-13" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="CX0fh3aHdGGXFl5mxuPn-12" value="&lt;div style=&quot;font-size: 13px;&quot;&gt;Differential expression&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=13;" parent="CX0fh3aHdGGXFl5mxuPn-6" vertex="1">
+                    <mxGeometry x="13" y="65" width="182" height="65" as="geometry"/>
+                </mxCell>
+                <mxCell id="CX0fh3aHdGGXFl5mxuPn-13" value="&lt;div style=&quot;font-size: 13px;&quot;&gt;Functional enrichment&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=13;" parent="CX0fh3aHdGGXFl5mxuPn-6" vertex="1">
+                    <mxGeometry x="13" y="156" width="182" height="65" as="geometry"/>
+                </mxCell>
+                <mxCell id="CX0fh3aHdGGXFl5mxuPn-7" value="&lt;div style=&quot;font-size: 13px;&quot;&gt;&lt;font style=&quot;font-size: 18px;&quot;&gt;III&lt;/font&gt;&lt;/div&gt;&lt;div style=&quot;font-size: 1px;&quot;&gt;&lt;br&gt;&lt;/div&gt;&lt;div style=&quot;font-size: 16px;&quot;&gt;&lt;span style=&quot;font-weight: normal;&quot;&gt;ML &amp;amp; Network Analysis&lt;/span&gt;&lt;br&gt;&lt;/div&gt;" style="swimlane;whiteSpace=wrap;html=1;rounded=1;startSize=52;fillColor=#ffe6cc;strokeColor=#d79b00;strokeWidth=2;shadow=0;glass=0;" parent="1" vertex="1">
+                    <mxGeometry x="455" y="52" width="208" height="234" as="geometry"/>
+                </mxCell>
+                <mxCell id="CX0fh3aHdGGXFl5mxuPn-14" value="&lt;div style=&quot;border-color: var(--border-color);&quot;&gt;Weighted Gene Co-expression Network Analysis&lt;/div&gt;&lt;div&gt;&lt;span style=&quot;background-color: initial;&quot;&gt;(WGCA)&lt;/span&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=13;" parent="CX0fh3aHdGGXFl5mxuPn-7" vertex="1">
+                    <mxGeometry x="13" y="65" width="182" height="65" as="geometry"/>
+                </mxCell>
+                <mxCell id="CX0fh3aHdGGXFl5mxuPn-15" value="&lt;div style=&quot;border-color: var(--border-color);&quot;&gt;Explainable&lt;/div&gt;&lt;div style=&quot;border-color: var(--border-color);&quot;&gt;machine learning&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=13;" parent="CX0fh3aHdGGXFl5mxuPn-7" vertex="1">
+                    <mxGeometry x="13" y="156" width="182" height="65" as="geometry"/>
+                </mxCell>
+                <mxCell id="CX0fh3aHdGGXFl5mxuPn-8" value="&lt;div style=&quot;font-size: 13px;&quot;&gt;&lt;font style=&quot;font-size: 18px;&quot;&gt;IV&lt;/font&gt;&lt;/div&gt;&lt;div style=&quot;font-size: 1px;&quot;&gt;&lt;br&gt;&lt;/div&gt;&lt;div style=&quot;font-size: 16px;&quot;&gt;&lt;span style=&quot;font-weight: normal;&quot;&gt;Integrative Analysis&lt;/span&gt;&lt;br&gt;&lt;/div&gt;" style="swimlane;whiteSpace=wrap;html=1;rounded=1;startSize=52;fillColor=#f8cecc;strokeColor=#b85450;strokeWidth=2;shadow=0;glass=0;" parent="1" vertex="1">
+                    <mxGeometry x="676" y="52" width="208" height="234" as="geometry"/>
+                </mxCell>
+                <mxCell id="CX0fh3aHdGGXFl5mxuPn-26" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="CX0fh3aHdGGXFl5mxuPn-8" source="CX0fh3aHdGGXFl5mxuPn-16" target="CX0fh3aHdGGXFl5mxuPn-17" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="CX0fh3aHdGGXFl5mxuPn-16" value="&lt;div style=&quot;font-size: 13px;&quot;&gt;Identification of k&lt;span style=&quot;background-color: initial;&quot;&gt;ey&lt;/span&gt;&lt;/div&gt;&lt;div style=&quot;font-size: 13px;&quot;&gt;&lt;span style=&quot;background-color: initial;&quot;&gt;WGCNA modules&lt;/span&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=13;" parent="CX0fh3aHdGGXFl5mxuPn-8" vertex="1">
+                    <mxGeometry x="13" y="65" width="182" height="65" as="geometry"/>
+                </mxCell>
+                <mxCell id="CX0fh3aHdGGXFl5mxuPn-17" value="&lt;div style=&quot;font-size: 13px;&quot;&gt;Identification of key genes&lt;/div&gt;&lt;div style=&quot;font-size: 13px;&quot;&gt;by SHAP value&lt;br style=&quot;font-size: 13px;&quot;&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=13;" parent="CX0fh3aHdGGXFl5mxuPn-8" vertex="1">
+                    <mxGeometry x="13" y="156" width="182" height="65" as="geometry"/>
+                </mxCell>
+                <mxCell id="CX0fh3aHdGGXFl5mxuPn-9" value="&lt;font style=&quot;font-size: 18px;&quot;&gt;V&lt;/font&gt;&lt;br&gt;&lt;div style=&quot;font-size: 1px;&quot;&gt;&lt;br&gt;&lt;/div&gt;&lt;div style=&quot;font-size: 16px;&quot;&gt;&lt;span style=&quot;font-weight: normal;&quot;&gt;Biomarker Validation&lt;/span&gt;&lt;br&gt;&lt;/div&gt;" style="swimlane;whiteSpace=wrap;html=1;rounded=1;startSize=52;fillColor=#e1d5e7;strokeColor=#9673a6;strokeWidth=2;shadow=0;glass=0;" parent="1" vertex="1">
+                    <mxGeometry x="897" y="52" width="208" height="234" as="geometry"/>
+                </mxCell>
+                <mxCell id="CX0fh3aHdGGXFl5mxuPn-18" value="&lt;div style=&quot;font-size: 13px;&quot;&gt;In-silico validation on&lt;/div&gt;&lt;div style=&quot;font-size: 13px;&quot;&gt;published PCa datasets&lt;br style=&quot;font-size: 13px;&quot;&gt;&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=13;" parent="CX0fh3aHdGGXFl5mxuPn-9" vertex="1">
+                    <mxGeometry x="13" y="65" width="182" height="156" as="geometry"/>
+                </mxCell>
+                <mxCell id="CX0fh3aHdGGXFl5mxuPn-21" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="CX0fh3aHdGGXFl5mxuPn-11" target="CX0fh3aHdGGXFl5mxuPn-12" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="227" y="241"/>
+                            <mxPoint x="227" y="150"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="CX0fh3aHdGGXFl5mxuPn-23" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="CX0fh3aHdGGXFl5mxuPn-12" target="CX0fh3aHdGGXFl5mxuPn-14" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="CX0fh3aHdGGXFl5mxuPn-25" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" parent="1" source="CX0fh3aHdGGXFl5mxuPn-14" target="CX0fh3aHdGGXFl5mxuPn-16" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="CX0fh3aHdGGXFl5mxuPn-27" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="CX0fh3aHdGGXFl5mxuPn-17" target="CX0fh3aHdGGXFl5mxuPn-18" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="2" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;entryX=0;entryY=0.5;entryDx=0;entryDy=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" edge="1" parent="1" source="CX0fh3aHdGGXFl5mxuPn-12" target="CX0fh3aHdGGXFl5mxuPn-15">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="442" y="162.51724137931035" as="sourcePoint"/>
+                        <mxPoint x="481" y="162.51724137931035" as="targetPoint"/>
+                        <Array as="points">
+                            <mxPoint x="449" y="150"/>
+                            <mxPoint x="449" y="241"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="3" value="" style="edgeStyle=none;html=1;" edge="1" parent="1" source="CX0fh3aHdGGXFl5mxuPn-15" target="CX0fh3aHdGGXFl5mxuPn-17">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

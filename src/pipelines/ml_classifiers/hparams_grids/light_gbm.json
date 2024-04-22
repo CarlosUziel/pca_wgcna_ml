@@ -1,0 +1,8 @@
+{
+  "boosting_type": ["gbdt", "dart"],
+  "max_depth": [2, 4, 8],
+  "n_estimators": [10, 25, 50],
+  "learning_rate": [1e-1, 1e-2, 1e-3],
+  "reg_alpha": [0.2, 0.5, 0.8],
+  "reg_lambda": [0.2, 0.5, 0.8]
+}

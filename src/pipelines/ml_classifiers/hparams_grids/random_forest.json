@@ -1,0 +1,8 @@
+{
+  "n_estimators": [5, 10, 25, 50],
+  "criterion": ["gini", "entropy"],
+  "max_samples": [0.3, 0.6, 1],
+  "max_depth": [4, 8, 16],
+  "max_features": ["sqrt", "log2"],
+  "class_weight": ["balanced", "balanced_subsample"]
+}

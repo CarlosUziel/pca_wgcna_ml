@@ -1,0 +1,5 @@
+{
+  "kernel": ["linear", "rbf"],
+  "nu": [0.2, 0.5, 0.7],
+  "gamma": ["scale", "auto"]
+}

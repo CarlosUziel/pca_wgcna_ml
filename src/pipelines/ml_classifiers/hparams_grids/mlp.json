@@ -1,0 +1,5 @@
+{
+  "hidden_layer_sizes": [[100, 50, 25], [50, 25], [25]],
+  "activation": ["tanh", "relu"],
+  "solver": ["lbfgs", "adam"]
+}
