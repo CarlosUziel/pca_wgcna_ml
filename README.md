@@ -5,7 +5,7 @@
 <div align="center">
   <img src="docs/1_workflow.png" alt="Workflow diagram">
 
-  <h1 align="center">Revealing Prostate Cancer Progression</h1>
+  <h1 align="center">Identification of Biomarkers and Trajectories of Prostate Cancer Progression</h1>
   <h4 align="center">A Bioinformatics Fusion of Weighted Correlation Network Analysis and Machine Learning</h4>
 
 </div>
@@ -39,7 +39,7 @@
 
 ## About The Project
 
-This repository contains the code necessary to reproduce the results of *Revealing Prostate Cancer Progression: A Bioinformatics Fusion of Weighted Correlation Network Analysis and Machine Learning*. See [publication]() for details.
+This repository contains the code necessary to reproduce the results of *Identification of Biomarkers and Trajectories of Prostate Cancer Progression: A Bioinformatics Fusion of Weighted Correlation Network Analysis and Machine Learning*. See [publication](https://www.biorxiv.org/content/10.1101/2023.03.02.530740v2) for details.
 
 The implementation was done in Python (with extensive use of [*rpy2*](https://github.com/rpy2/rpy2) wrappers) and R.
 
@@ -164,7 +164,7 @@ Distributed under the MIT License. See `LICENSE` for more information.
 
 ## Contact
 
- Raheleh Sheibani Tezerji [[GitHub](https://github.com/Rahel14350) - [Google Scholar](https://scholar.google.com/citations?user=yblPwXoAAAAJ&hl=en) - [LinkedIn](https://www.linkedin.com/in/raheleh-sheibani-tezerji-62239693/)]
+Raheleh Sheibani Tezerji [[GitHub](https://github.com/Rahel14350) - [Google Scholar](https://scholar.google.com/citations?user=yblPwXoAAAAJ&hl=en) - [LinkedIn](https://www.linkedin.com/in/raheleh-sheibani-tezerji-62239693/)]
 
 Carlos Uziel Pérez Malla [[GitHub](https://github.com/CarlosUziel) - [Google Scholar](https://scholar.google.es/citations?user=tEz_OeIAAAAJ&hl=es&oi=ao) - [LinkedIn](https://www.linkedin.com/in/carlosuziel) - [Twitter](https://twitter.com/perez_malla) - [Website](https://perez-malla.com/)]
 
@@ -178,7 +178,7 @@ This work was supported by grants provided by the FWF (National Science Foundati
 
 ## Citation
 
-If you have found the content of this repository useful, please consider citing this work:
+If you have found the content of this repository useful, please consider citing [this work](https://www.biorxiv.org/content/10.1101/2023.03.02.530740v2):
 
 ...
 
