@@ -39,7 +39,7 @@ def run_fastqc(
     # 1. Get all fastq files per sample
     samples_reads = defaultdict(list)
     for reads_file in sorted(fastq_path.glob(pattern)):
-        sample_id = reads_file.stem.partition(".")[0]
+        sample_id = reads_file.stem.partition(".")[0].partition("_")[0]
         samples_reads[sample_id].append(reads_file)
 
     # 2. Run fastqc for each sample
@@ -105,7 +105,7 @@ def run_cutadapt(
     # 1. Get all fastq files per sample
     samples_reads = defaultdict(list)
     for reads_file in sorted(fastq_path.glob(pattern)):
-        sample_id = reads_file.stem.partition(".")[0]
+        sample_id = reads_file.stem.partition(".")[0].partition("_")[0]
         samples_reads[sample_id].append(reads_file)
 
     # 2. Run Cutadapt for each sample
@@ -177,7 +177,7 @@ def run_trim_galore(
     # 1. Get all fastq files per sample
     samples_reads = defaultdict(list)
     for reads_file in sorted(fastq_path.glob(pattern)):
-        sample_id = reads_file.stem.partition(".")[0]
+        sample_id = reads_file.stem.partition(".")[0].partition("_")[0]
         samples_reads[sample_id].append(reads_file)
 
     # 2. Run Cutadapt for each sample
@@ -354,7 +354,7 @@ def run_star(
     # 3. Get all fastq files per sample
     samples_reads = defaultdict(list)
     for reads_file in sorted(fastq_path.glob(pattern)):
-        sample_id = reads_file.stem.partition(".")[0]
+        sample_id = reads_file.stem.partition(".")[0].partition("_")[0]
         samples_reads[sample_id].append(reads_file)
 
     # 4. Run star for each sample
