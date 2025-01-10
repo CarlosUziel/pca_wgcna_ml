@@ -17,7 +17,7 @@ warnings.filterwarnings("ignore")
 STORAGE: Path = Path("/rawdata/GSE221601")
 MULTIQC_PATH: Path = STORAGE.joinpath("multiqc_clean")
 ANALYSES_PATH: Iterable[Path] = [
-    STORAGE.joinpath("fastqc_raw"),
+    STORAGE.joinpath("fastqc_clean"),
     STORAGE.joinpath("mapping/star"),
 ]
 MULTIQC_KWARGS: Dict[str, Any] = {

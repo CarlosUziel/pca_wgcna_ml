@@ -38,7 +38,7 @@ STAR_KWARGS: Dict[str, Any] = {
     "--quantMode": "GeneCounts",
 }
 SLURM_KWARGS: Dict[str, Any] = None
-PATTERN: str = "**/*.fastq"
+PATTERN: str = "**/*.fastq.gz"
 
 run_star(
     fastq_path=FASTQ_PATH,
