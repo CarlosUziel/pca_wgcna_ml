@@ -1,13 +1,13 @@
 """
-    Wrappers for R package SBGNview
+Wrappers for R package SBGNview
 
-    All functions have pythonic inputs and outputs.
+All functions have pythonic inputs and outputs.
 
-    Note that the arguments in python use "_" instead of ".".
-    rpy2 does this transformation for us.
-    Eg:
-        R --> ann_df.category
-        Python --> data_category
+Note that the arguments in python use "_" instead of ".".
+rpy2 does this transformation for us.
+Eg:
+    R --> ann_df.category
+    Python --> data_category
 """
 
 from pathlib import Path
@@ -23,7 +23,7 @@ def sbgn_view(
     pathway_id: str,
     pathway_name: str,
     save_dir: Path,
-    **kwargs
+    **kwargs,
 ):
     """
     This is the main function to map, integrate and render omics data on pathway
@@ -52,5 +52,5 @@ def sbgn_view(
         sbgn_dir=str(save_dir),
         output_file=str(save_dir.joinpath(pathway_name)),
         output_formats=ro.StrVector(["svg", "pdf"]),
-        **kwargs
+        **kwargs,
     )

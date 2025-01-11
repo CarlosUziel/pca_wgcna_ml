@@ -1,13 +1,13 @@
 """
-    Wrappers for R package cola
+Wrappers for R package cola
 
-    All functions have pythonic inputs and outputs.
+All functions have pythonic inputs and outputs.
 
-    Note that the arguments in python use "_" instead of ".".
-    rpy2 does this transformation for us.
-    Eg:
-        R --> data.category
-        Python --> data_category
+Note that the arguments in python use "_" instead of ".".
+rpy2 does this transformation for us.
+Eg:
+    R --> data.category
+    Python --> data_category
 """
 
 from pathlib import Path
@@ -26,7 +26,7 @@ def run_all_consensus_partition_methods(
     threads: int = 4,
     max_k: int = 5,
     save_dir: Path = None,
-    **kwargs
+    **kwargs,
 ):
     """
     Consensus partitioning for all combinations of methods.
@@ -57,7 +57,7 @@ def hierarchical_partition(
     threads: int = 4,
     max_k: int = 5,
     save_dir: Path = None,
-    **kwargs
+    **kwargs,
 ):
     """
     Hierarchical partition.

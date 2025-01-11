@@ -37,9 +37,9 @@ def process_gene_count_data(
     # 1.1. Loading
     counts_df = pd.read_csv(counts_file, index_col=0).transpose()
 
-    assert (
-        not counts_df.empty and not annot_df.empty
-    ), "Counts or annotation dataframes are empty."
+    assert not counts_df.empty and not annot_df.empty, (
+        "Counts or annotation dataframes are empty."
+    )
 
     # 1.2. Only keep common samples between data and sample annotation
     common_idxs = list(set(counts_df.index).intersection(set(annot_df.index)))

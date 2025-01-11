@@ -145,9 +145,7 @@ This repository is organized as follows:
 Source files formatted using the following commands:
 
 ```bash
-isort .
-autoflake -r --in-place --remove-unused-variable --remove-all-unused-imports --ignore-init-module-imports .
-black .
+ruff check . --fix && ruff format . && ruff check . --fix --select I
 ```
 
 <p align="right">(<a href="#top">back to top</a>)</p>

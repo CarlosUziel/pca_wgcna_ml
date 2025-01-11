@@ -1,13 +1,13 @@
 """
-    Wrappers for R package enrichplot
+Wrappers for R package enrichplot
 
-    All functions have pythonic inputs and outputs.
+All functions have pythonic inputs and outputs.
 
-    Note that the arguments in python use "_" instead of ".".
-    rpy2 does this transformation for us.
-    Eg:
-        R --> ann_df.category
-        Python --> data_category
+Note that the arguments in python use "_" instead of ".".
+rpy2 does this transformation for us.
+Eg:
+    R --> ann_df.category
+    Python --> data_category
 """
 
 from pathlib import Path
@@ -121,7 +121,7 @@ def gseaplot(
     save_path: Path,
     width: int = 10,
     height: int = 10,
-    **kwargs
+    **kwargs,
 ):
     """
     Visualize analyzing result of GSEA
@@ -138,7 +138,7 @@ def pmcplot(
     period: ro.IntVector = ro.IntVector(range(2010, 2021, 1)),
     width: int = 10,
     height: int = 10,
-    **kwargs
+    **kwargs,
 ):
     """
     PubMed Central Trend plot

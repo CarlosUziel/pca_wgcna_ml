@@ -97,9 +97,7 @@ def intersect_degs(
         )
     ).reset_index().drop_duplicates(subset=[genes_id]).astype(
         {"ENTREZID": int}
-    ).set_index(
-        genes_id
-    ).sort_values(
+    ).set_index(genes_id).sort_values(
         [*degs_intersections.index.names, genes_id],
         ascending=[False] * len(degs_intersections.index.names) + [True],
     ).to_csv(
@@ -221,9 +219,7 @@ def intersect_degs_external(
         ).drop(columns=["baseMean", "log2FoldChange", "lfcSE", "pvalue", "padj"])
     ).reset_index().drop_duplicates(subset=[genes_id]).astype(
         {"ENTREZID": int}
-    ).set_index(
-        genes_id
-    ).sort_values(
+    ).set_index(genes_id).sort_values(
         [*degs_intersections.index.names, genes_id],
         ascending=[False] * len(degs_intersections.index.names) + [True],
     ).to_csv(
@@ -360,9 +356,7 @@ def intersect_degs_shap(
         )
     ).reset_index().drop_duplicates(subset=[genes_id]).astype(
         {"ENTREZID": int}
-    ).set_index(
-        genes_id
-    ).sort_values(
+    ).set_index(genes_id).sort_values(
         [*degs_shap_intersections.index.names, genes_id],
         ascending=[False] * len(degs_shap_intersections.index.names) + [True],
     ).to_csv(
@@ -507,16 +501,12 @@ def intersect_degs_shap_external(
         )
     ).combine_first(
         external_annot_df.set_index(genes_id)
-    ).reset_index().drop_duplicates(
-        subset=[genes_id]
-    ).astype(
+    ).reset_index().drop_duplicates(subset=[genes_id]).astype(
         {"ENTREZID": int}
     ).sort_values(
         [*degs_shap_intersections.index.names, genes_id],
         ascending=[False] * len(degs_shap_intersections.index.names) + [True],
-    ).set_index(
-        [genes_id, *degs_shap_intersections.index.names]
-    ).to_csv(
+    ).set_index([genes_id, *degs_shap_intersections.index.names]).to_csv(
         save_path.joinpath(
             f"{comparison_alias}_intersecting_degs_shap_{genes_id}_{n_all_common}.csv"
         )
@@ -1193,9 +1183,7 @@ def intersect_wgcna(
             )
         ).reset_index().drop_duplicates(subset=[genes_id]).set_index(
             genes_id
-        ).sort_values(
-            modules_intersections.index.names, ascending=False
-        ).to_csv(
+        ).sort_values(modules_intersections.index.names, ascending=False).to_csv(
             save_path.joinpath(
                 f"{comparison_alias}_intersecting_wgcna"
                 f"_{module_names_set_str}_{genes_id}_{n_all_common}.csv"
@@ -1774,9 +1762,9 @@ def test_biomarkers(
         annot_df[gene] = vst_df.loc[gene, annot_df.index]
 
     # 0.2. Filter annotation to include only relevant contrast levels in the right order
-    assert (
-        set(annot_df[contrast_factor]) - set(contrasts_levels_order) == set()
-    ), "contrasts_levels_order must contain all contrasts levels available."
+    assert set(annot_df[contrast_factor]) - set(contrasts_levels_order) == set(), (
+        "contrasts_levels_order must contain all contrasts levels available."
+    )
 
     annot_df = pd.concat(
         [

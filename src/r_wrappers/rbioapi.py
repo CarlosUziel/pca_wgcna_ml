@@ -1,13 +1,13 @@
 """
-    Wrappers for R package rbioapi
+Wrappers for R package rbioapi
 
-    All functions have pythonic inputs and outputs.
+All functions have pythonic inputs and outputs.
 
-    Note that the arguments in python use "_" instead of ".".
-    rpy2 does this transformation for us.
-    Eg:
-        R --> data.category
-        Python --> data_category
+Note that the arguments in python use "_" instead of ".".
+rpy2 does this transformation for us.
+Eg:
+    R --> data.category
+    Python --> data_category
 """
 
 import logging
@@ -28,7 +28,10 @@ r_ggplot = importr("ggplot2")
 
 
 def string_map_ids(
-    symbol_genes: Iterable[str], species: int = 9606, api_lock: Lock = Lock(), **kwargs  # type: ignore
+    symbol_genes: Iterable[str],
+    species: int = 9606,
+    api_lock: Lock = None,
+    **kwargs,  # type: ignore
 ) -> pd.DataFrame:
     """This function Calls STRING's API to Convert a set of identifiers to STRING
     Identifiers. Although You can call STRING services with a variety of common
@@ -43,6 +46,9 @@ def string_map_ids(
             but optional if your input is less than 100 IDs).
         api_lock: Multiprocessing lock to access STRINGDB API.
     """
+    if api_lock is None:
+        api_lock = Lock()
+
     while True:
         try:
             with api_lock:

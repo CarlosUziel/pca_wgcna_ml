@@ -32,7 +32,7 @@ def evaluate_biomarkers(
     for genes in list(powerset(biomarkers))[1:]:
         cv_scores_df = evaluate_logistic_regression(annot_df, biomarkers, cond_col)
         biomarkers_eval_results["_".join(genes)] = {
-            metric: f"{mean:.2f} \u00B1 {std:.2f}"
+            metric: f"{mean:.2f} \u00b1 {std:.2f}"
             for metric, mean, std in zip(
                 cv_scores_df.columns,
                 cv_scores_df.mean().values,

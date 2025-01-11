@@ -47,7 +47,7 @@ def rpy2_df_to_pd_df_manual(rpy2_df: Any) -> pd.DataFrame:
 
     df_dict = {
         col: [
-            str(x) if type(x) != ro.StrVector else tuple(list(x))
+            str(x) if not isinstance(x, ro.StrVector) else tuple(list(x))
             for x in rpy2_df.rx2(col)
         ]
         for col in rpy2_df.colnames
@@ -243,7 +243,7 @@ def make_granges_from_dataframe(df: Any, **kwargs):
         df: A ann_df.frame or DataFrame object. If not, then the function first
             tries to turn df into a ann_df frame with as.data.frame(df).
     """
-    df = pd_df_to_rpy2_df(df) if type(df) == pd.DataFrame else df
+    df = pd_df_to_rpy2_df(df) if isinstance(df, pd.DataFrame) else df
     return r_genomic_ranges.makeGRangesFromDataFrame(df, **kwargs)
 
 

@@ -5,7 +5,7 @@ import random
 from collections import defaultdict
 from copy import deepcopy
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
+from typing import Any, Dict, Iterable, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -66,9 +66,9 @@ def process_data(
         random_seed: Seed to initialize random state.
         msigdb_cat: MSigDB category, optional.
     """
-    assert (
-        len(set(annot_df[contrast_factor])) == 2
-    ), "Only two clases are supported (binary classification)"
+    assert len(set(annot_df[contrast_factor])) == 2, (
+        "Only two clases are supported (binary classification)"
+    )
 
     ####################################################################################
     # 1. Data
@@ -416,7 +416,7 @@ def bootstrap_relevant_features(
     # 1. Choose random_seeds
     random_seeds = (
         random_seeds
-        if type(random_seeds) == List
+        if isinstance(random_seeds, list)
         else random.sample(range(random_seeds * random_seeds), random_seeds)
     )
 
@@ -668,7 +668,7 @@ def bootstrap_training(
         )
         plt.suptitle("Top features contributing to binary model output", fontsize=20)
         plt.title(
-            f"{label_encoder.classes_[0]} \u27F7 {label_encoder.classes_[1]}",
+            f"{label_encoder.classes_[0]} \u27f7 {label_encoder.classes_[1]}",
             fontsize=14,
             pad=20,
         )

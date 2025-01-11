@@ -1,13 +1,13 @@
 """
-    Wrappers for R package WGCNA
+Wrappers for R package WGCNA
 
-    All functions have pythonic inputs and outputs.
+All functions have pythonic inputs and outputs.
 
-    Note that the arguments in python use "_" instead of ".".
-    rpy2 does this transformation for us.
-    Eg:
-        R --> ann_df.category
-        Python --> data_category
+Note that the arguments in python use "_" instead of ".".
+rpy2 does this transformation for us.
+Eg:
+    R --> ann_df.category
+    Python --> data_category
 """
 
 import multiprocessing
@@ -145,7 +145,7 @@ def plot_dendro_and_colors(
     save_path: Path,
     width: int = 10,
     height: int = 10,
-    **kwargs
+    **kwargs,
 ):
     """
     This function plots a hierarchical clustering dendrogram and color annotation(s) of
