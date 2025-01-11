@@ -44,4 +44,9 @@ Rscript -e 'library(devtools); install_github("al2na/methylKit", build_vignettes
 Rscript -e 'old.packages(repos="https://cloud.r-project.org/"); update.packages(ask=FALSE, repos="https://cloud.r-project.org/")'
 Rscript -e 'remove.packages("DO.db"); BiocManager::install("DO.db"); BiocManager::install(ask=FALSE)'
 Rscript -e 'BiocManager::install("BioinformaticsFMRP/TCGAbiolinksGUI.data"); BiocManager::install("BioinformaticsFMRP/TCGAbiolinks")'
-Rscript -e 'IRkernel::installspec()'
+Rscript -e 'BiocManager::install()' # to update all bioconductor packages
+Rscript -e 'IRkernel::installspec()' # to install R kernel for Jupyter
+
+# package fixes as of 04/08/2024
+Rscript -e 'devtools::install_github("Bioconductor/BiocFileCache")'
+Rscript -e 'remotes::install_version("matrixStats", version="1.1.0", repos="https://cloud.r-project.org")'

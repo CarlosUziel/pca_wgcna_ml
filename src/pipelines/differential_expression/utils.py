@@ -647,7 +647,7 @@ def differential_expression(
     lfc_ths: Iterable[float],
     design_factors: Iterable[str] = None,
     heatmap_top_n: int = 1000,
-    counts_matrix: Optional[Path] = None,
+    counts_matrix: Optional[pd.DataFrame] = None,
     counts_path: Optional[Path] = None,
     counts_files_pattern: str = ".tsv",
     compute_vst: bool = True,
