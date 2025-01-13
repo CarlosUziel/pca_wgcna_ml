@@ -461,11 +461,14 @@ def bootstrap_relevant_features(
 
         # 2.5. Get SHAP values
         try:
-            explainer = shap.Explainer(model, algorithm="auto", n_jobs=1)
+            explainer = shap.Explainer(model, algorithm="auto")
             shap_values = explainer(
                 X=np.ascontiguousarray(counts_df), y=np.ascontiguousarray(class_labels)
             ).values
-        except Exception:
+        except Exception as e:
+            logging.warning(
+                f"SHAP values could not be computed. Error: {e}. Using KernelExplainer"
+            )
             explainer = shap.KernelExplainer(
                 model.predict, np.ascontiguousarray(counts_df)
             )
