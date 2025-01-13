@@ -1226,6 +1226,7 @@ def intersect_wgcna_shap(
     classifier_name: str = "random_forest",
     bootstrap_iterations: int = 10000,
     shap_th: float = 0.001,
+    genes_id: str = "ENTREZID",
 ) -> None:
     """
     Compute all possible intersecting sets of WGCNA modules between a given list of
@@ -1281,8 +1282,8 @@ def intersect_wgcna_shap(
             module_name = module_file.stem.split("_")[2]
             if module_name != "M0":
                 wgcna_modules_dfs[contrast][module_name] = pd.read_csv(
-                    module_file, index_col=0
-                ).dropna(subset=["SYMBOL"])
+                    module_file
+                ).dropna(subset=[genes_id])
 
     if all(
         [
@@ -1311,11 +1312,10 @@ def intersect_wgcna_shap(
                 .joinpath(
                     f"bootstrap_{bootstrap_iterations}_shap_values_{shap_th_str}.csv"
                 ),
-                index_col=0,
-            ).dropna(subset=["SYMBOL"])
+            ).dropna(subset=[genes_id])
         except FileNotFoundError as e:
             logging.warning("File not found, setting empty dictionary", e)
-            degs_shap_dfs[contrast] = pd.DataFrame(columns=["SYMBOL"])
+            degs_shap_dfs[contrast] = pd.DataFrame(columns=[genes_id])
 
     if all([df.empty for df in degs_shap_dfs.values()]):
         logging.warning(
@@ -1325,7 +1325,7 @@ def intersect_wgcna_shap(
         return
 
     contrasts_degs_shap = {
-        contrast: set(degs_shap_df["SYMBOL"].values)
+        contrast: set(degs_shap_df[genes_id].values)
         for contrast, degs_shap_df in degs_shap_dfs.items()
     }
 
@@ -1344,7 +1344,7 @@ def intersect_wgcna_shap(
         modules_intersections = from_contents(
             {
                 f"{contrast}_{module_name}": set(
-                    wgcna_modules[module_name]["SYMBOL"].values
+                    wgcna_modules[module_name][genes_id].values
                 ).intersection(contrasts_degs_shap[contrast])
                 for (contrast, wgcna_modules), module_name in zip(
                     wgcna_modules_dfs.items(), module_names_set
@@ -1366,10 +1366,31 @@ def intersect_wgcna_shap(
 
         # 1.1. Save WGCNA modules intersection dataframe to disk
         module_names_set_str = "+".join(module_names_set)
-        modules_intersections.to_csv(
+        modules_intersections.reset_index().set_index("id").rename_axis(genes_id).join(
+            pd.concat(
+                [
+                    df[module_name].set_index(genes_id)
+                    for df, module_name in zip(
+                        wgcna_modules_dfs.values(), module_names_set
+                    )
+                ]
+            ).drop(
+                columns=[
+                    "baseMean",
+                    "log2FoldChange",
+                    "lfcSE",
+                    "pvalue",
+                    "padj",
+                    "ClusterCoef",
+                    "Connectivity",
+                ]
+            )
+        ).reset_index().drop_duplicates(subset=[genes_id]).set_index(
+            genes_id
+        ).sort_values(modules_intersections.index.names, ascending=False).to_csv(
             save_path.joinpath(
-                f"{comparison_alias}_intersecting_wgcna_{module_names_set_str}_"
-                f"{n_all_common}.csv"
+                f"{comparison_alias}_intersecting_wgcna"
+                f"_{module_names_set_str}_{genes_id}_{n_all_common}.csv"
             )
         )
 
