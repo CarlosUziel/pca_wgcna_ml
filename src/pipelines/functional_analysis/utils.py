@@ -100,10 +100,10 @@ def prepare_gene_lists(
 
     elif data_type in ("diff_expr_ml", "diff_meth_ml"):
         if data_type == "diff_expr_ml":
-            inputs_df = pd.read_csv(
+            genes_shap = pd.read_csv(
                 results_file,
                 index_col=0,
-            ).sort_values("shap_value", ascending=False)
+            ).sort_values("shap_value", ascending=False)["shap_value"]
         else:
             genes_shap = (
                 pd.read_csv(
@@ -118,12 +118,12 @@ def prepare_gene_lists(
             )
 
         background_genes = ro.FloatVector(genes_shap.tolist())
-        background_genes.names = inputs_df.index.tolist()
+        background_genes.names = genes_shap.index.tolist()
 
         if analysis_type == "ora":
-            inputs_df_filtered = genes_shap[genes_shap > shap_th]
-            filtered_genes = ro.FloatVector(inputs_df_filtered.tolist())
-            filtered_genes.names = inputs_df_filtered.index.tolist()
+            genes_shap_filtered = genes_shap[genes_shap > shap_th]
+            filtered_genes = ro.FloatVector(genes_shap_filtered.tolist())
+            filtered_genes.names = genes_shap_filtered.index.tolist()
 
     elif data_type in ("diff_expr_wgcna", "diff_meth_wgcna"):
         if data_type == "diff_expr_wgcna":
