@@ -61,7 +61,7 @@ P_THS: Iterable[float] = (0.05,)
 LFC_LEVELS: Iterable[str] = ("all", "up", "down")
 LFC_THS: Iterable[float] = (1.0,)
 SPECIES: str = "Homo sapiens"
-CLASSIFIER_NAMES: Iterable[str] = ("decision_tree", "random_forest", "light_gbm")
+CLASSIFIER_NAMES: Iterable[str] = ("decision_tree", "random_forest")
 PARALLEL: bool = True
 
 contrast_conditions = sorted(set(chain(*CONTRASTS_LEVELS)))
