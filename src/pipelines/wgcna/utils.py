@@ -123,7 +123,7 @@ def differential_expression(
     save_rds(sft, sft_file)
 
     power = sft.rx2("powerEstimate")[0]
-    if isinstance(power, ro.NA_RealType) or not (1 <= power <= 30):
+    if isinstance(power, type(ro.NA_Real)) or not (1 <= power <= 30):
         power = 6 if network_type == "unsigned" else 12
     logging.info(f"Power estimate chosen: {power}")
 
@@ -440,7 +440,7 @@ def differential_methylation(
     save_rds(sft, sft_file)
 
     power = sft.rx2("powerEstimate")[0]
-    if isinstance(power, ro.NA_RealType) or not (1 <= power <= 30):
+    if isinstance(power, type(ro.NA_Real)) or not (1 <= power <= 30):
         power = 6 if network_type == "unsigned" else 12
     logging.info(f"Power estimate chosen: {power}")
 

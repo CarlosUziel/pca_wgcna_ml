@@ -44,7 +44,7 @@ user_args = vars(parser.parse_args())
 STORAGE: Path = Path(user_args["root_dir"])
 DATA_ROOT: Path = STORAGE.joinpath("TCGA_PRAD_SU2C_PCF_GSE221601")
 DATA_PATH: Path = DATA_ROOT.joinpath("data")
-ANNOT_PATH: Path = DATA_PATH.joinpath("samples_annotation_tcga_prad_su2c_clusters.csv")
+ANNOT_PATH: Path = DATA_PATH.joinpath("samples_annotation.csv")
 SAMPLE_CONTRAST_FACTOR: str = "sample_type"
 
 CONTRASTS_LEVELS: Iterable[Tuple[str, str]] = [
