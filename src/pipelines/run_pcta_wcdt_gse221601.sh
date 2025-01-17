@@ -1,0 +1,26 @@
+#!/bin/bash
+
+# This script runs all the scripts from the TCGA PRAD SU2C PCF GSE221601 pipeline
+
+# Differential Expression Analysis
+python differential_expression/run/pcta_wcdt_gse221601/contrasts.py
+python functional_analysis/run/rna_seq/pcta_wcdt_gse221601/contrasts.py
+
+# WGCNA Analysis
+python wgcna/run/rna_seq/pcta_wcdt_gse221601/contrasts.py
+python functional_analysis/run/rna_seq/pcta_wcdt_gse221601/contrasts_wgcna.py
+
+# ML Analysis
+python ml_classifiers/run/rna_seq/pcta_wcdt_gse221601/contrasts_genes_features_hptuning.py
+python ml_classifiers/run/rna_seq/pcta_wcdt_gse221601/contrasts_genes_features_bootstrap_training.py
+python functional_analysis/run/rna_seq/pcta_wcdt_gse221601/contrasts_ml.py
+
+# Integrative Analysis
+python integrative_analysis/run/rna_seq/pcta_wcdt_gse221601/contrasts_intersect_degs.py
+python integrative_analysis/run/rna_seq/pcta_wcdt_gse221601/contrasts_intersect_degs_shap.py
+python integrative_analysis/run/rna_seq/pcta_wcdt_gse221601/contrasts_intersect_pathways.py
+python integrative_analysis/run/rna_seq/pcta_wcdt_gse221601/contrasts_intersect_pathways_genes.py
+python integrative_analysis/run/rna_seq/pcta_wcdt_gse221601/contrasts_intersect_pathways_genes_shap.py
+python integrative_analysis/run/rna_seq/pcta_wcdt_gse221601/contrasts_intersect_wgcna.py
+python integrative_analysis/run/rna_seq/pcta_wcdt_gse221601/contrasts_intersect_wgcna_pathways.py
+python integrative_analysis/run/rna_seq/pcta_wcdt_gse221601/contrasts_intersect_wgcna_shap.py
