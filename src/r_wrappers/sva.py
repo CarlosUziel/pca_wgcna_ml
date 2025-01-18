@@ -26,6 +26,8 @@ def combat_seq(counts_df: pd.DataFrame, batch: Iterable[int], **kwargs):
     ComBat_seq is an improved model from ComBat using negative binomial regression,
         which specifically targets RNA-Seq count data.
 
+    *docs: https://rdrr.io/bioc/sva/man/ComBat_seq.html
+
     Args:
         counts_df: Counts dataframe (genes x samples).
         batch: Int vector indicating batches.
