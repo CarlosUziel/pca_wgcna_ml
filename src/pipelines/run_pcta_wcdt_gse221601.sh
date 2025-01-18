@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# This script runs all the scripts from the TCGA PRAD SU2C PCF GSE221601 pipeline
+# This script runs all the scripts from the PCTA-WCDT-GSE221601 pipeline
 
 # Differential Expression Analysis
 python differential_expression/run/pcta_wcdt_gse221601/contrasts.py
