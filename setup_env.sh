@@ -1,7 +1,7 @@
 #!/bin/bash
 
 mamba create -n bioinfo -c nvidia -c rapidsai -c conda-forge -c bioconda -y \
-rpy2 typer pydantic pandas umap-learn plotly python-kaleido matplotlib-base \
+rpy2 ruff typer pydantic pandas umap-learn plotly python-kaleido matplotlib-base \
 jupyterlab ipywidgets tqdm autoflake black black-jupyter pylint flake8 \
 bioconductor-tcgabiolinks bioconductor-deseq2 bioconductor-complexheatmap \
 bioconductor-apeglm bioconductor-enhancedvolcano r-pheatmap r-venndiagram \
