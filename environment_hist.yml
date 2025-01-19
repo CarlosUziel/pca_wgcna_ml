@@ -127,8 +127,7 @@ dependencies:
   - r-r.filesets
   - python-docx
   - ruff
-  - isort
   - ca-certificates
   - certifi
   - openssl
-prefix: /home/uziel/miniforge3/envs/bioinfo
+prefix: /media/ssd/Perez/miniforge3/envs/bioinfo
