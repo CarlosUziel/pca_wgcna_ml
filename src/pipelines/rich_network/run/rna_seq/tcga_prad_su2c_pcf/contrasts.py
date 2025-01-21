@@ -93,11 +93,11 @@ for (
     CORR_THS,
     REMOVE_ISOLATED,
 ):
-    p_th_str = str(p_th).replace(".", "_")
-    lfc_th_str = str(lfc_th).replace(".", "_")
+    p_thr_str = str(p_th).replace(".", "_")
+    lfc_thr_str = str(lfc_th).replace(".", "_")
     exp_name = (
         f"{exp_prefix}_{test}_vs_{control}_"
-        + f"{p_col}_{p_th_str}_{lfc_level}_{lfc_th_str}"
+        + f"{p_col}_{p_thr_str}_{lfc_level}_{lfc_thr_str}"
     )
 
     input_collection.append(

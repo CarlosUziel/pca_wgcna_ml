@@ -42,7 +42,7 @@ parser.add_argument(
 
 user_args = vars(parser.parse_args())
 STORAGE: Path = Path(user_args["root_dir"])
-DATA_ROOT: Path = STORAGE.joinpath("TCGA_PRAD_SU2C_PCF_GSE221601")
+DATA_ROOT: Path = STORAGE.joinpath("PCTA_WCDT_GSE221601")
 DATA_PATH: Path = DATA_ROOT.joinpath("data")
 ANNOT_PATH: Path = DATA_PATH.joinpath("samples_annotation.csv")
 SAMPLE_CONTRAST_FACTOR: str = "sample_type"
@@ -61,22 +61,21 @@ BOOTSTRAP_ITERATIONS: int = 10000
 PARALLEL: bool = True
 
 contrast_conditions = sorted(set(chain(*CONTRASTS_LEVELS)))
-exp_prefix = f"{SAMPLE_CONTRAST_FACTOR}_{'+'.join(contrast_conditions)}_"
+exp_prefix = (
+    "Sig_res_LRT_across_sample_types_overall_effects_hspc+mcrpc+norm+prim_1232samples"
+)
 org_db = OrgDB(SPECIES)
 annot_df = pd.read_csv(ANNOT_PATH, index_col=0)
 
 input_collection = []
-for (test, control), p_col, p_th, lfc_level, lfc_th, classifier_name in product(
-    CONTRASTS_LEVELS, P_COLS, P_THS, LFC_LEVELS, LFC_THS, CLASSIFIER_NAMES
+for p_col, p_th, lfc_level, lfc_th, classifier_name in product(
+    P_COLS, P_THS, LFC_LEVELS, LFC_THS, CLASSIFIER_NAMES
 ):
     p_thr_str = str(p_th).replace(".", "_")
     lfc_thr_str = str(lfc_th).replace(".", "_")
-    exp_name = (
-        f"{exp_prefix}_{test}_vs_{control}_"
-        + f"{p_col}_{p_thr_str}_{lfc_level}_{lfc_thr_str}"
-    )
+    exp_name = f"{exp_prefix}_{p_col}_{p_thr_str}_{lfc_level}_{lfc_thr_str}"
 
-    custom_genes_file = DATA_ROOT.joinpath("deseq2").joinpath(
+    custom_genes_file = DATA_ROOT.joinpath("deseq2_lrt").joinpath(
         f"{exp_name}_deseq_results_unique.csv"
     )
 
@@ -84,7 +83,11 @@ for (test, control), p_col, p_th, lfc_level, lfc_th, classifier_name in product(
         continue
 
     annot_df_contrasts = deepcopy(
-        annot_df[annot_df[SAMPLE_CONTRAST_FACTOR].isin((test, control))]
+        annot_df[
+            annot_df[SAMPLE_CONTRAST_FACTOR].isin(
+                annot_df[annot_df[SAMPLE_CONTRAST_FACTOR].isin(contrast_conditions)]
+            )
+        ]
     )
 
     input_collection.append(
@@ -92,11 +95,13 @@ for (test, control), p_col, p_th, lfc_level, lfc_th, classifier_name in product(
             data_type="gene_expr",
             features_type="genes",
             classifier_name=classifier_name,
-            data=(DATA_ROOT.joinpath("deseq2").joinpath(f"{exp_prefix}_vst.csv")),
+            data=DATA_ROOT.joinpath("deseq2_lrt").joinpath(
+                "vsd_filtered_LRT_reduced_design_sample_types_hspc+mcrpc+norm+prim.csv"
+            ),
             annot_df=annot_df_contrasts,
             contrast_factor=SAMPLE_CONTRAST_FACTOR,
             hparams_file=(
-                DATA_ROOT.joinpath("ml_classifiers")
+                DATA_ROOT.joinpath("ml_classifiers_lrt")
                 .joinpath(exp_name)
                 .joinpath(classifier_name)
                 .joinpath("genes_features")
@@ -105,7 +110,7 @@ for (test, control), p_col, p_th, lfc_level, lfc_th, classifier_name in product(
             ),
             org_db=org_db,
             results_path=(
-                DATA_ROOT.joinpath("ml_classifiers")
+                DATA_ROOT.joinpath("ml_classifiers_lrt")
                 .joinpath(exp_name)
                 .joinpath(classifier_name)
                 .joinpath("genes_features")

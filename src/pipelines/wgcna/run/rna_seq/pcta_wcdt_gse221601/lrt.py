@@ -45,7 +45,7 @@ user_args = vars(parser.parse_args())
 STORAGE: Path = Path(user_args["root_dir"])
 DATA_ROOT: Path = STORAGE.joinpath("PCTA_WCDT_GSE221601")
 ANNOT_PATH: Path = DATA_ROOT.joinpath("data").joinpath("samples_annotation.csv")
-WGCNA_ROOT = DATA_ROOT.joinpath("wgcna")
+WGCNA_ROOT = DATA_ROOT.joinpath("wgcna_lrt")
 WGCNA_ROOT.mkdir(exist_ok=True, parents=True)
 SAMPLE_CONTRAST_FACTOR: str = "sample_type"
 
@@ -69,12 +69,13 @@ PARALLEL: bool = True
 annot_df = pd.read_csv(ANNOT_PATH, index_col=0)
 
 contrast_conditions = sorted(set(chain(*CONTRASTS_LEVELS)))
-exp_prefix = f"{SAMPLE_CONTRAST_FACTOR}_{'+'.join(contrast_conditions)}_"
+exp_prefix = (
+    "Sig_res_LRT_across_sample_types_overall_effects_hspc+mcrpc+norm+prim_1232samples"
+)
 org_db = OrgDB(SPECIES)
 
 input_collection = []
 for (
-    (test, control),
     p_col,
     p_th,
     lfc_level,
@@ -83,7 +84,6 @@ for (
     correlation_type,
     iterative,
 ) in product(
-    CONTRASTS_LEVELS,
     P_COLS,
     P_THS,
     LFC_LEVELS,
@@ -94,12 +94,9 @@ for (
 ):
     p_thr_str = str(p_th).replace(".", "_")
     lfc_thr_str = str(lfc_th).replace(".", "_")
-    exp_name = (
-        f"{exp_prefix}_{test}_vs_{control}_"
-        + f"{p_col}_{p_thr_str}_{lfc_level}_{lfc_thr_str}"
-    )
+    exp_name = f"{exp_prefix}_{p_col}_{p_thr_str}_{lfc_level}_{lfc_thr_str}"
 
-    degs_file = DATA_ROOT.joinpath("deseq2").joinpath(
+    degs_file = DATA_ROOT.joinpath("deseq2_lrt").joinpath(
         f"{exp_name}_deseq_results_unique.csv"
     )
     if not degs_file.exists():
@@ -107,7 +104,9 @@ for (
 
     input_collection.append(
         dict(
-            data_file=DATA_ROOT.joinpath("deseq2").joinpath(f"{exp_prefix}_vst.csv"),
+            data_file=DATA_ROOT.joinpath("deseq2_lrt").joinpath(
+                "vsd_filtered_LRT_reduced_design_sample_types_hspc+mcrpc+norm+prim.csv"
+            ),
             wgcna_path=(
                 WGCNA_ROOT.joinpath(exp_name).joinpath(
                     "iterative" if iterative else "standard"
@@ -116,7 +115,7 @@ for (
             degs_file=degs_file,
             annot_df=deepcopy(annot_df),
             contrast_factor=SAMPLE_CONTRAST_FACTOR,
-            contrast=(test, control),
+            contrast=contrast_conditions,
             org_db=org_db,
             network_type=network_type,
             correlation_type=correlation_type,

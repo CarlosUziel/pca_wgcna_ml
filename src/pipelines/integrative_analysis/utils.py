@@ -46,11 +46,11 @@ def intersect_degs(
     deseq2_path = root_path.joinpath("deseq2")
     save_path = root_path.joinpath("integrative_analysis").joinpath("intersecting_degs")
     save_path.mkdir(exist_ok=True, parents=True)
-    p_th_str = str(p_th).replace(".", "_")
-    lfc_th_str = str(lfc_th).replace(".", "_")
+    p_thr_str = str(p_th).replace(".", "_")
+    lfc_thr_str = str(lfc_th).replace(".", "_")
     comparison_alias = (
         f"{comparison_alias or '+'.join(contrast_prefixes.keys())}_"
-        f"{p_col}_{p_th_str}_{lfc_level}_{lfc_th_str}"
+        f"{p_col}_{p_thr_str}_{lfc_level}_{lfc_thr_str}"
     ).replace(" ", "_")
 
     # 1. Get DEGs IDs sets for each comparison
@@ -59,7 +59,7 @@ def intersect_degs(
         try:
             degs_dfs[contrast] = pd.read_csv(
                 deseq2_path.joinpath(
-                    f"{contrast_prefix}_{p_col}_{p_th_str}_{lfc_level}_{lfc_th_str}"
+                    f"{contrast_prefix}_{p_col}_{p_thr_str}_{lfc_level}_{lfc_thr_str}"
                     "_deseq_results_unique.csv"
                 ),
                 index_col=0,
@@ -164,11 +164,11 @@ def intersect_degs_external(
         "intersecting_degs_external"
     )
     save_path.mkdir(exist_ok=True, parents=True)
-    p_th_str = str(p_th).replace(".", "_")
-    lfc_th_str = str(lfc_th).replace(".", "_")
+    p_thr_str = str(p_th).replace(".", "_")
+    lfc_thr_str = str(lfc_th).replace(".", "_")
     comparison_alias = (
         f"{comparison_alias or '+'.join(contrast_prefixes.keys())}_"
-        f"{p_col}_{p_th_str}_{lfc_level}_{lfc_th_str}"
+        f"{p_col}_{p_thr_str}_{lfc_level}_{lfc_thr_str}"
     ).replace(" ", "_")
 
     # 1. Get DEGs sets for each comparison
@@ -177,7 +177,7 @@ def intersect_degs_external(
         try:
             degs_dfs[contrast] = pd.read_csv(
                 deseq2_path.joinpath(
-                    f"{contrast_prefix}_{p_col}_{p_th_str}_{lfc_level}_{lfc_th_str}"
+                    f"{contrast_prefix}_{p_col}_{p_thr_str}_{lfc_level}_{lfc_thr_str}"
                     "_deseq_results_unique.csv"
                 ),
                 index_col=0,
@@ -290,12 +290,12 @@ def intersect_degs_shap(
         .joinpath(f"{classifier_name}_{bootstrap_iterations}")
     )
     save_path.mkdir(exist_ok=True, parents=True)
-    p_th_str = str(p_th).replace(".", "_")
-    lfc_th_str = str(lfc_th).replace(".", "_")
+    p_thr_str = str(p_th).replace(".", "_")
+    lfc_thr_str = str(lfc_th).replace(".", "_")
     shap_th_str = str(shap_th).replace(".", "_")
     comparison_alias = (
         f"{comparison_alias or '+'.join(contrast_prefixes.keys())}_"
-        f"{p_col}_{p_th_str}_{lfc_level}_{lfc_th_str}_"
+        f"{p_col}_{p_thr_str}_{lfc_level}_{lfc_thr_str}_"
         f"shap_values_{shap_th_str}"
     ).replace(" ", "_")
 
@@ -305,7 +305,7 @@ def intersect_degs_shap(
         try:
             degs_shap_dfs[contrast] = pd.read_csv(
                 ml_path.joinpath(
-                    f"{contrast_prefix}_{p_col}_{p_th_str}_{lfc_level}_{lfc_th_str}"
+                    f"{contrast_prefix}_{p_col}_{p_thr_str}_{lfc_level}_{lfc_thr_str}"
                 )
                 .joinpath(classifier_name)
                 .joinpath("genes_features")
@@ -432,12 +432,12 @@ def intersect_degs_shap_external(
         .joinpath(f"{classifier_name}_{bootstrap_iterations}")
     )
     save_path.mkdir(exist_ok=True, parents=True)
-    p_th_str = str(p_th).replace(".", "_")
-    lfc_th_str = str(lfc_th).replace(".", "_")
+    p_thr_str = str(p_th).replace(".", "_")
+    lfc_thr_str = str(lfc_th).replace(".", "_")
     shap_th_str = str(shap_th).replace(".", "_")
     comparison_alias = (
         f"{comparison_alias or '+'.join(contrast_prefixes.keys())}_"
-        f"{p_col}_{p_th_str}_{lfc_level}_{lfc_th_str}_"
+        f"{p_col}_{p_thr_str}_{lfc_level}_{lfc_thr_str}_"
         f"shap_values_{shap_th_str}"
     ).replace(" ", "_")
 
@@ -447,7 +447,7 @@ def intersect_degs_shap_external(
         try:
             degs_shap_dfs[contrast] = pd.read_csv(
                 ml_path.joinpath(
-                    f"{contrast_prefix}_{p_col}_{p_th_str}_{lfc_level}_{lfc_th_str}"
+                    f"{contrast_prefix}_{p_col}_{p_thr_str}_{lfc_level}_{lfc_thr_str}"
                 )
                 .joinpath(classifier_name)
                 .joinpath("genes_features")
@@ -581,10 +581,10 @@ def intersect_pathways(
         and lfc_th is not None
     )
 
-    p_th_str = str(p_th).replace(".", "_")
-    lfc_th_str = str(lfc_th).replace(".", "_")
+    p_thr_str = str(p_th).replace(".", "_")
+    lfc_thr_str = str(lfc_th).replace(".", "_")
     filters_str = (
-        f"{p_col}_{p_th_str}_{lfc_level}_{lfc_th_str}_"
+        f"{p_col}_{p_thr_str}_{lfc_level}_{lfc_thr_str}_"
         if analysis_type == "ora"
         else ""
     )
@@ -601,8 +601,8 @@ def intersect_pathways(
             pathways_dfs[contrast] = pd.read_csv(
                 func_path.joinpath(func_db.split("_")[0]).joinpath(
                     (
-                        f"{contrast_prefix}_{p_col}_{p_th_str}_"
-                        f"{lfc_level}_{lfc_th_str}_ora{func_suffix}.csv"
+                        f"{contrast_prefix}_{p_col}_{p_thr_str}_"
+                        f"{lfc_level}_{lfc_thr_str}_ora{func_suffix}.csv"
                         if analysis_type == "ora"
                         else f"{contrast_prefix}_gsea{func_suffix}.csv"
                     )
@@ -745,10 +745,10 @@ def intersect_pathways_genes(
         and lfc_th is not None
     )
 
-    p_th_str = str(p_th).replace(".", "_")
-    lfc_th_str = str(lfc_th).replace(".", "_")
+    p_thr_str = str(p_th).replace(".", "_")
+    lfc_thr_str = str(lfc_th).replace(".", "_")
     filters_str = (
-        f"{p_col}_{p_th_str}_{lfc_level}_{lfc_th_str}_"
+        f"{p_col}_{p_thr_str}_{lfc_level}_{lfc_thr_str}_"
         if analysis_type == "ora"
         else ""
     )
@@ -767,8 +767,8 @@ def intersect_pathways_genes(
             pathways_dfs[contrast] = pd.read_csv(
                 func_path.joinpath(func_db.split("_")[0]).joinpath(
                     (
-                        f"{contrast_prefix}_{p_col}_{p_th_str}_"
-                        f"{lfc_level}_{lfc_th_str}_ora{func_suffix}.csv"
+                        f"{contrast_prefix}_{p_col}_{p_thr_str}_"
+                        f"{lfc_level}_{lfc_thr_str}_ora{func_suffix}.csv"
                         if analysis_type == "ora"
                         else f"{contrast_prefix}_gsea{func_suffix}.csv"
                     )
@@ -911,10 +911,10 @@ def intersect_pathways_genes_shap(
         and lfc_th is not None
     )
 
-    p_th_str = str(p_th).replace(".", "_")
-    lfc_th_str = str(lfc_th).replace(".", "_")
+    p_thr_str = str(p_th).replace(".", "_")
+    lfc_thr_str = str(lfc_th).replace(".", "_")
     filters_str = (
-        f"{p_col}_{p_th_str}_{lfc_level}_{lfc_th_str}_"
+        f"{p_col}_{p_thr_str}_{lfc_level}_{lfc_thr_str}_"
         if analysis_type == "ora"
         else ""
     )
@@ -934,8 +934,8 @@ def intersect_pathways_genes_shap(
             pathways_dfs[contrast] = pd.read_csv(
                 func_path.joinpath(func_db.split("_")[0]).joinpath(
                     (
-                        f"{contrast_prefix}_{p_col}_{p_th_str}_"
-                        f"{lfc_level}_{lfc_th_str}_ora{func_suffix}.csv"
+                        f"{contrast_prefix}_{p_col}_{p_thr_str}_"
+                        f"{lfc_level}_{lfc_thr_str}_ora{func_suffix}.csv"
                         if analysis_type == "ora"
                         else f"{contrast_prefix}_gsea{func_suffix}.csv"
                     )
@@ -967,7 +967,7 @@ def intersect_pathways_genes_shap(
         try:
             degs_shap_dfs[contrast] = pd.read_csv(
                 ml_path.joinpath(
-                    f"{contrast_prefix}_{p_col}_{p_th_str}_{lfc_level}_{lfc_th_str}"
+                    f"{contrast_prefix}_{p_col}_{p_thr_str}_{lfc_level}_{lfc_thr_str}"
                 )
                 .joinpath(classifier_name)
                 .joinpath("genes_features")
@@ -1084,11 +1084,11 @@ def intersect_wgcna(
         "intersecting_wgcna"
     )
     save_path.mkdir(exist_ok=True, parents=True)
-    p_th_str = str(p_th).replace(".", "_")
-    lfc_th_str = str(lfc_th).replace(".", "_")
+    p_thr_str = str(p_th).replace(".", "_")
+    lfc_thr_str = str(lfc_th).replace(".", "_")
     comparison_alias = (
         f"{comparison_alias or '+'.join(contrast_prefixes.keys())}_"
-        f"{p_col}_{p_th_str}_{lfc_level}_{lfc_th_str}_"
+        f"{p_col}_{p_thr_str}_{lfc_level}_{lfc_thr_str}_"
         f"{correlation_type}_{network_type}"
     ).replace(" ", "_")
 
@@ -1097,7 +1097,7 @@ def intersect_wgcna(
     for contrast, contrast_prefix in contrast_prefixes.items():
         exp_path = (
             wgcna_path.joinpath(
-                f"{contrast_prefix}_{p_col}_{p_th_str}_{lfc_level}_{lfc_th_str}"
+                f"{contrast_prefix}_{p_col}_{p_thr_str}_{lfc_level}_{lfc_thr_str}"
             )
             .joinpath("standard")
             .joinpath("results")
@@ -1256,12 +1256,12 @@ def intersect_wgcna_shap(
         .joinpath(f"{classifier_name}_{bootstrap_iterations}")
     )
     save_path.mkdir(exist_ok=True, parents=True)
-    p_th_str = str(p_th).replace(".", "_")
-    lfc_th_str = str(lfc_th).replace(".", "_")
+    p_thr_str = str(p_th).replace(".", "_")
+    lfc_thr_str = str(lfc_th).replace(".", "_")
     shap_th_str = str(shap_th).replace(".", "_")
     comparison_alias = (
         f"{comparison_alias or '+'.join(contrast_prefixes.keys())}_"
-        f"{p_col}_{p_th_str}_{lfc_level}_{lfc_th_str}_"
+        f"{p_col}_{p_thr_str}_{lfc_level}_{lfc_thr_str}_"
         f"{correlation_type}_{network_type}_"
         f"{classifier_name}_{bootstrap_iterations}_shap_values_{shap_th_str}"
     ).replace(" ", "_")
@@ -1271,7 +1271,7 @@ def intersect_wgcna_shap(
     for contrast, contrast_prefix in contrast_prefixes.items():
         exp_path = (
             wgcna_path.joinpath(
-                f"{contrast_prefix}_{p_col}_{p_th_str}_{lfc_level}_{lfc_th_str}"
+                f"{contrast_prefix}_{p_col}_{p_thr_str}_{lfc_level}_{lfc_thr_str}"
             )
             .joinpath("standard")
             .joinpath("results")
@@ -1304,7 +1304,7 @@ def intersect_wgcna_shap(
         try:
             degs_shap_dfs[contrast] = pd.read_csv(
                 ml_path.joinpath(
-                    f"{contrast_prefix}_{p_col}_{p_th_str}_{lfc_level}_{lfc_th_str}"
+                    f"{contrast_prefix}_{p_col}_{p_thr_str}_{lfc_level}_{lfc_thr_str}"
                 )
                 .joinpath(classifier_name)
                 .joinpath("genes_features")
@@ -1454,11 +1454,11 @@ def intersect_wgcna_pathways(
         .joinpath(func_db)
     )
     save_path.mkdir(exist_ok=True, parents=True)
-    p_th_str = str(p_th).replace(".", "_")
-    lfc_th_str = str(lfc_th).replace(".", "_")
+    p_thr_str = str(p_th).replace(".", "_")
+    lfc_thr_str = str(lfc_th).replace(".", "_")
     comparison_alias = (
         f"{comparison_alias or '+'.join(contrast_prefixes.keys())}_"
-        f"{p_col}_{p_th_str}_{lfc_level}_{lfc_th_str}_"
+        f"{p_col}_{p_thr_str}_{lfc_level}_{lfc_thr_str}_"
         f"{correlation_type}_{network_type}"
     ).replace(" ", "_")
     func_db_str = func_db.split("_")[0]
@@ -1468,7 +1468,7 @@ def intersect_wgcna_pathways(
     for contrast, contrast_prefix in contrast_prefixes.items():
         exp_path = (
             wgcna_path.joinpath(
-                f"{contrast_prefix}_{p_col}_{p_th_str}_{lfc_level}_{lfc_th_str}"
+                f"{contrast_prefix}_{p_col}_{p_thr_str}_{lfc_level}_{lfc_thr_str}"
             )
             .joinpath("standard")
             .joinpath("functional")
@@ -2011,12 +2011,12 @@ def intersect_msigdb_shap(
         .joinpath(msigdb_cat)
     )
     save_path.mkdir(exist_ok=True, parents=True)
-    p_th_str = str(p_th).replace(".", "_")
-    lfc_th_str = str(lfc_th).replace(".", "_")
+    p_thr_str = str(p_th).replace(".", "_")
+    lfc_thr_str = str(lfc_th).replace(".", "_")
     shap_th_str = str(shap_th).replace(".", "_")
     comparison_alias = (
         f"{comparison_alias or '+'.join(contrast_prefixes.keys())}_"
-        f"{p_col}_{p_th_str}_{lfc_level}_{lfc_th_str}_"
+        f"{p_col}_{p_thr_str}_{lfc_level}_{lfc_thr_str}_"
         f"shap_values_{shap_th_str}"
     ).replace(" ", "_")
 
@@ -2026,7 +2026,7 @@ def intersect_msigdb_shap(
         try:
             msig_shap_dfs[contrast] = pd.read_csv(
                 ml_path.joinpath(
-                    f"{contrast_prefix}_{p_col}_{p_th_str}_{lfc_level}_{lfc_th_str}"
+                    f"{contrast_prefix}_{p_col}_{p_thr_str}_{lfc_level}_{lfc_thr_str}"
                 )
                 .joinpath(classifier_name)
                 .joinpath("gene_sets_features")
@@ -2144,12 +2144,12 @@ def intersect_msigdb_shap_genes(
         .joinpath(msigdb_cat)
     )
     save_path.mkdir(exist_ok=True, parents=True)
-    p_th_str = str(p_th).replace(".", "_")
-    lfc_th_str = str(lfc_th).replace(".", "_")
+    p_thr_str = str(p_th).replace(".", "_")
+    lfc_thr_str = str(lfc_th).replace(".", "_")
     shap_th_str = str(shap_th).replace(".", "_")
     comparison_alias = (
         f"{comparison_alias or '+'.join(contrast_prefixes.keys())}_"
-        f"{p_col}_{p_th_str}_{lfc_level}_{lfc_th_str}_"
+        f"{p_col}_{p_thr_str}_{lfc_level}_{lfc_thr_str}_"
         f"shap_values_{shap_th_str}"
     ).replace(" ", "_")
     gene_sets_path = save_path.joinpath(comparison_alias)
@@ -2161,7 +2161,7 @@ def intersect_msigdb_shap_genes(
         try:
             msig_shap_dfs[contrast] = pd.read_csv(
                 ml_path.joinpath(
-                    f"{contrast_prefix}_{p_col}_{p_th_str}_{lfc_level}_{lfc_th_str}"
+                    f"{contrast_prefix}_{p_col}_{p_thr_str}_{lfc_level}_{lfc_thr_str}"
                 )
                 .joinpath(classifier_name)
                 .joinpath("gene_sets_features")
