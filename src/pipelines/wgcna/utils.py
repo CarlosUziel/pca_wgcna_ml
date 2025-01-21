@@ -116,7 +116,7 @@ def differential_expression(
     sft = pick_soft_threshold(
         vst_net,
         corFnc=correlation_type,
-        RsquaredCut=0.8,
+        RsquaredCut=0.7,
         networkType=network_type,
         verbose=0,
     )
@@ -147,11 +147,11 @@ def differential_expression(
         corType=correlation_type,
         power=power,
         maxBlockSize=35000,
-        minModuleSize=30,
+        minModuleSize=20,
         reassignThreshold=1e-6,
-        detectCutHeight=0.998,
+        detectCutHeight=0.99,
         mergeCutHeight=0.15,
-        deepSplit=2,
+        deepSplit=4,
         numericLabels=True,
         pamStage=True,
         pamRespectsDendro=True,

@@ -249,7 +249,7 @@ def vst_transform(
     try:
         return r_deseq2.vst(dds, **kwargs)
     except RRuntimeError as e:
-        logging.warn(e)
+        logging.warning(e)
         return r_deseq2.varianceStabilizingTransformation(dds, **kwargs)
 
 

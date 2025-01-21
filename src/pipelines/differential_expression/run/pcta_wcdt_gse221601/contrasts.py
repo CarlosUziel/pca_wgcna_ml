@@ -45,7 +45,7 @@ PLOTS_PATH: Path = RESULTS_PATH.joinpath("plots")
 PLOTS_PATH.mkdir(exist_ok=True, parents=True)
 DATA_PATH: Path = DATA_ROOT.joinpath("data")
 ANNOT_PATH: Path = DATA_PATH.joinpath("samples_annotation.csv")
-COUNTS_MATRIX_PATH: Path = DATA_PATH.joinpath("raw_counts_batch_corrected.csv")
+COUNTS_MATRIX_PATH: Path = DATA_PATH.joinpath("all_counts_batch_corrected_v3.csv")
 SAMPLE_CONTRAST_FACTOR: str = "sample_type"
 
 CONTRASTS_LEVELS: Iterable[Tuple[str, str]] = [

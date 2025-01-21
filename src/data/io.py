@@ -3,43 +3,38 @@ import logging
 import shutil
 from itertools import product
 from pathlib import Path
+from typing import Optional
 
 import pandas as pd
 
 from data.utils import parallelize_star
 
 
-def unzip_gz(gz_file: Path, target_dir: Path):
+def unzip_gz(gz_file: Path, target_dir: Optional[Path]) -> None:
     """
-    Given a root directory, unzip all ".gz" files contained in any level
-    of subdirectories matching pattern to the given target directory. If
-    target_dir is None, files are unzipped in the same directory where they
-    are located.
+    Unzips a .gz file to the specified target directory. If no target directory is provided,
+    the file is unzipped in the same directory where it is located.
 
     Args:
-        root: root directory path
-        target_dir: new directory where files are moved to, defaults to root
-            if no path is provided.
-        pattern: pattern the files chosen should match
-            IMPORTANT NOTE: "**" must be present in order for the search to
-            be recursive.
-                Eg: "**/*.gz"
+        gz_file (Path): Path to the .gz file.
+        target_dir (Optional[Path]): Directory where the file should be unzipped. If None,
+            the file is unzipped in the same directory as gz_file.
     """
-    # 1. Ensure target dir exists
-    target_dir.mkdir(exist_ok=True, parents=True)
-
-    # 2. Extract each file in target directory
     target_dir = target_dir or gz_file.parent
+    target_dir.mkdir(exist_ok=True, parents=True)
     dest_path = target_dir.joinpath(Path(gz_file).stem)
 
     with gzip.open(str(gz_file), "rb") as s_file, dest_path.open("wb") as d_file:
         shutil.copyfileobj(s_file, d_file)
 
 
-def copy_file(file_path: Path, new_file_path: Path):
+def copy_file(file_path: Path, new_file_path: Path) -> None:
     """
-    Copy a file from one path to another, ensuring that the parents of the new
-    path exist.
+    Copies a file from one path to another, ensuring that the parents of the new path exist.
+
+    Args:
+        file_path (Path): Path to the source file.
+        new_file_path (Path): Path to the destination file.
     """
     new_file_path.parent.mkdir(exist_ok=True, parents=True)
     try:
@@ -48,10 +43,13 @@ def copy_file(file_path: Path, new_file_path: Path):
         logging.warning(e)
 
 
-def subset_star_counts(counts_file: Path, subset_col: int = 1):
+def subset_star_counts(counts_file: Path, subset_col: int = 1) -> None:
     """
-    Filter a STAR gene counts file by removing unnecessary rows and selecting the
-    relevant column.
+    Filters a STAR gene counts file by removing unnecessary rows and selecting the relevant column.
+
+    Args:
+        counts_file (Path): Path to the STAR gene counts file.
+        subset_col (int): Index of the column to select. Defaults to 1.
     """
     df = pd.read_csv(counts_file, sep="\t", comment="#", index_col=0, header=None)
 
@@ -66,10 +64,17 @@ def subset_star_counts(counts_file: Path, subset_col: int = 1):
     df.to_csv(counts_file, sep="\t", header=False)
 
 
-def clean_star_counts(star_path: Path, star_counts_path: Path):
+def clean_star_counts(
+    star_path: Path, star_counts_path: Path, subset_col: int = 1
+) -> None:
     """
-    Copy and rename star counts files after mapping. It is assumed that gene counts
-    files are inside directories named after the sample ID.
+    Copies and renames STAR counts files after mapping. It is assumed that gene counts files
+    are inside directories named after the sample ID.
+
+    Args:
+        star_path (Path): Path to the directory containing STAR counts files.
+        star_counts_path (Path): Path to the directory where cleaned counts files will be saved.
+        subset_col (int): Index of the column to select. Defaults to 1.
     """
     star_counts_path.mkdir(exist_ok=True, parents=True)
 
@@ -84,38 +89,35 @@ def clean_star_counts(star_path: Path, star_counts_path: Path):
 
     _ = parallelize_star(
         subset_star_counts,
-        list(product(star_counts_path.glob("*.tsv"), [1])),
+        list(product(star_counts_path.glob("*.tsv"), [subset_col])),
         method="fork",
     )
 
 
-def rename_genes(counts_file: Path):
+def rename_genes(counts_file: Path) -> None:
     """
-    Given a counts file in .tsv format, which contain gene names
-    in each line, rename them to remove the decimal part of the name.
+    Renames genes in a counts file by removing the decimal part of the gene names.
 
     Args:
-        counts_file: tab-separated counts file.
+        counts_file (Path): Path to the tab-separated counts file.
     """
     df = pd.read_csv(counts_file, sep="\t", header=None, index_col=0)
     df.index = [idx.split(".")[0] for idx in df.index]
     df.to_csv(counts_file, sep="\t", header=False)
 
 
-def intersect_raw_counts(counts_path: Path, pattern: str = "*.tsv"):
+def intersect_raw_counts(counts_path: Path, pattern: str = "*.tsv") -> None:
     """
-    Replaces the genes contained in the raw count files in `counts_path`
-    so that all files contain the intersection set of genes. In other words,
-    makes sure that files only contain those genes available in all files.
+    Ensures that all raw count files in the specified directory contain only the intersection
+    set of genes, i.e., genes that are present in all files.
 
     Args:
-        counts_path: Directory where the files to change can be located.
+        counts_path (Path): Directory where the raw count files are located.
+        pattern (str): Pattern to match the raw count files. Defaults to "*.tsv".
     """
-    # 0. Get list of files for each type
     counts_files = list(counts_path.glob(pattern))
     assert len(counts_files) > 1, f"No files found under {counts_path}"
 
-    # 1. Load content of each file
     counts_data = pd.DataFrame(
         {
             counts_file: {
@@ -126,10 +128,7 @@ def intersect_raw_counts(counts_path: Path, pattern: str = "*.tsv"):
         }
     )
 
-    # 2. Remove any genes with missing values (meaning that are not share among all
-    # files)
     counts_data.dropna(inplace=True)
 
-    # 3. Write results
     for c in counts_data.columns:
         counts_data[c].to_csv(c, sep="\t", header=False)

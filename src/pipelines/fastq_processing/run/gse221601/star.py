@@ -36,6 +36,16 @@ STAR_KWARGS: Dict[str, Any] = {
     "--outSAMtype": "BAM SortedByCoordinate",
     "--outBAMcompression": 10,
     "--quantMode": "GeneCounts",
+    "--outFilterType": "BySJout",
+    "--outFilterMultimapNmax": 20,
+    "--alignSJoverhangMin": 8,
+    "--alignSJDBoverhangMin": 1,
+    "--outFilterMismatchNmax": 999,
+    "--outFilterMismatchNoverLmax": 0.6,
+    "--alignIntronMin": 20,
+    "--alignIntronMax": 1000000,
+    "--alignMatesGapMax": 1000000,
+    "--outSAMattributes": "NH HI NM MD",
 }
 SLURM_KWARGS: Dict[str, Any] = None
 PATTERN: str = "**/*.fastq.gz"

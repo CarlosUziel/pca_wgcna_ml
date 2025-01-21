@@ -280,8 +280,9 @@ def proc_diff_expr_dataset(
         vst = vst_transform(dds)
 
         # 2.2. Save to disk
-        save_path = results_path.joinpath(f"{exp_prefix}_vst.csv")
-        rpy2_df_to_pd_df(ro.r("assay")(vst)).to_csv(save_path)
+        save_path = results_path.joinpath(f"{exp_prefix}_vst")
+        rpy2_df_to_pd_df(ro.r("assay")(vst)).to_csv(save_path.with_suffix(".csv"))
+        save_rds(vst, save_path.with_suffix(".RDS"))
 
         # 2.3. Dataset visualizations
         proc_diff_expr_dataset_plots(
