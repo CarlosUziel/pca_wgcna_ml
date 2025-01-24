@@ -14,7 +14,7 @@ import logging
 from multiprocessing import Lock
 from pathlib import Path
 from time import sleep
-from typing import Iterable
+from typing import Iterable, Optional
 
 import pandas as pd
 import rpy2.robjects as ro
@@ -30,8 +30,8 @@ r_ggplot = importr("ggplot2")
 def string_map_ids(
     symbol_genes: Iterable[str],
     species: int = 9606,
-    api_lock: Lock = None,
-    **kwargs,  # type: ignore
+    api_lock: Optional[Lock] = None,  # type: ignore
+    **kwargs,
 ) -> pd.DataFrame:
     """This function Calls STRING's API to Convert a set of identifiers to STRING
     Identifiers. Although You can call STRING services with a variety of common

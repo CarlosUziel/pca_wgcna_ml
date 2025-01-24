@@ -45,6 +45,7 @@ STORAGE: Path = Path(user_args["root_dir"])
 DATA_ROOT: Path = STORAGE.joinpath("PCTA_WCDT_GSE221601")
 DATA_PATH: Path = DATA_ROOT.joinpath("data")
 ANNOT_PATH: Path = DATA_PATH.joinpath("samples_annotation.csv")
+DESEQ2_ROOT = DATA_ROOT.joinpath("deseq2")
 SAMPLE_CONTRAST_FACTOR: str = "sample_type"
 
 CONTRASTS_LEVELS: Iterable[Tuple[str, str]] = [
@@ -83,9 +84,7 @@ for (test, control), p_col, p_th, lfc_level, lfc_th, classifier_name in product(
         + f"{p_col}_{p_thr_str}_{lfc_level}_{lfc_thr_str}"
     )
 
-    custom_genes_file = DATA_ROOT.joinpath("deseq2").joinpath(
-        f"{exp_name}_deseq_results_unique.csv"
-    )
+    custom_genes_file = DESEQ2_ROOT.joinpath(f"{exp_name}_deseq_results_unique.csv")
 
     if not custom_genes_file.exists():
         continue
@@ -99,7 +98,7 @@ for (test, control), p_col, p_th, lfc_level, lfc_th, classifier_name in product(
             data_type="gene_expr",
             features_type="genes",
             classifier_name=classifier_name,
-            data=(DATA_ROOT.joinpath("deseq2").joinpath(f"{exp_prefix}_vst.csv")),
+            data=(DESEQ2_ROOT.joinpath(f"{exp_prefix}_vst.csv")),
             annot_df=annot_df_contrasts,
             contrast_factor=SAMPLE_CONTRAST_FACTOR,
             hparams_grid_file=(

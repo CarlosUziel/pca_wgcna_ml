@@ -41,13 +41,15 @@ parser.add_argument(
 
 user_args = vars(parser.parse_args())
 STORAGE: Path = Path(user_args["root_dir"])
-DATA_ROOT: Path = STORAGE.joinpath("PCTA_WCDT_GSE221601")
-ML_ROOT: Path = DATA_ROOT.joinpath("ml_classifiers_lrt")
+DATA_ROOT: Path = STORAGE.joinpath("PCTA_WCDT_GSE221601_FILTERED")
+ML_ROOT: Path = DATA_ROOT.joinpath("ml_classifiers")
 SAMPLE_CONTRAST_FACTOR: str = "sample_type"
 
 CONTRASTS_LEVELS: Iterable[Tuple[str, str]] = [
-    ("HSPC", "PRIM"),
-    ("MCRPC", "HSPC"),
+    ("prim", "norm"),
+    ("hspc", "prim"),
+    ("mcrpc", "prim"),
+    ("hspc", "mcrpc"),
 ]
 P_COLS: Iterable[str] = ["padj"]
 P_THS: Iterable[float] = (0.05,)
@@ -61,21 +63,22 @@ PARALLEL: bool = True
 
 
 contrast_conditions = sorted(set(chain(*CONTRASTS_LEVELS)))
-exp_prefix = (
-    "Sig_res_LRT_across_sample_types_overall_effects_hspc+mcrpc+norm+prim_1232samples"
-)
+exp_prefix = f"{SAMPLE_CONTRAST_FACTOR}_{'+'.join(contrast_conditions)}_"
 org_db = OrgDB(SPECIES)
 
 # 1. Generate input collection for all arguments' combinations
 input_collection = []
-for p_col, p_th, lfc_level, lfc_th, classifier_name in product(
-    P_COLS, P_THS, LFC_LEVELS, LFC_THS, CLASSIFIER_NAMES
+for (test, control), p_col, p_th, lfc_level, lfc_th, classifier_name in product(
+    CONTRASTS_LEVELS, P_COLS, P_THS, LFC_LEVELS, LFC_THS, CLASSIFIER_NAMES
 ):
     # 1.1. Setup
     p_thr_str = str(p_th).replace(".", "_")
     lfc_thr_str = str(lfc_th).replace(".", "_")
     data_root = (
-        ML_ROOT.joinpath(f"{exp_prefix}_{p_col}_{p_thr_str}_{lfc_level}_{lfc_thr_str}")
+        ML_ROOT.joinpath(
+            f"{exp_prefix}_{test}_vs_{control}_"
+            f"{p_col}_{p_thr_str}_{lfc_level}_{lfc_thr_str}"
+        )
         .joinpath(classifier_name)
         .joinpath("genes_features")
     )

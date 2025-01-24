@@ -40,7 +40,7 @@ parser.add_argument(
 
 user_args = vars(parser.parse_args())
 STORAGE: Path = Path(user_args["root_dir"])
-DATA_ROOT: Path = STORAGE.joinpath("PCTA_WCDT_GSE221601")
+DATA_ROOT: Path = STORAGE.joinpath("PCTA_WCDT_GSE221601_FILTERED")
 SAMPLE_CONTRAST_FACTOR: str = "sample_type"
 CONTRASTS_LEVELS: Iterable[Tuple[str, str]] = [
     ("prim", "norm"),

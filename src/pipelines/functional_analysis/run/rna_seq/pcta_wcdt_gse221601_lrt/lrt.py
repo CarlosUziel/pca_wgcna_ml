@@ -3,10 +3,10 @@ import functools
 import logging
 import multiprocessing
 import warnings
-from itertools import chain, product
+from itertools import product
 from multiprocessing import freeze_support
 from pathlib import Path
-from typing import Iterable, Tuple
+from typing import Iterable
 
 from rich import traceback
 from rpy2.rinterface_lib.callbacks import logger as rpy2_logger
@@ -41,7 +41,7 @@ parser.add_argument(
 
 user_args = vars(parser.parse_args())
 STORAGE: Path = Path(user_args["root_dir"])
-DATA_ROOT: Path = STORAGE.joinpath("PCTA_WCDT_GSE221601")
+DATA_ROOT: Path = STORAGE.joinpath("PCTA_WCDT_GSE221601_LRT")
 FUNC_PATH: Path = DATA_ROOT.joinpath("functional")
 FUNC_PATH.mkdir(exist_ok=True, parents=True)
 PLOTS_PATH: Path = FUNC_PATH.joinpath("plots")
@@ -49,12 +49,6 @@ PLOTS_PATH.mkdir(exist_ok=True, parents=True)
 DESEQ2_ROOT = DATA_ROOT.joinpath("deseq2")
 SAMPLE_CONTRAST_FACTOR: str = "sample_type"
 
-CONTRASTS_LEVELS: Iterable[Tuple[str, str]] = [
-    ("prim", "norm"),
-    ("hspc", "prim"),
-    ("mcrpc", "prim"),
-    ("hspc", "mcrpc"),
-]
 P_COLS: Iterable[str] = ["padj"]
 P_THS: Iterable[float] = (0.05,)
 LFC_LEVELS: Iterable[str] = ("all", "up", "down")
@@ -63,56 +57,53 @@ SPECIES: str = "Homo sapiens"
 PARALLEL: bool = True
 
 
-contrast_conditions = sorted(set(chain(*CONTRASTS_LEVELS)))
-exp_prefix = f"{SAMPLE_CONTRAST_FACTOR}_{'+'.join(contrast_conditions)}_"
+exp_prefix = (
+    "Sig_res_LRT_across_sample_types_overall_effects_hspc+mcrpc+norm+prim_1232samples"
+)
 org_db = OrgDB(SPECIES)
 
 # 1. Generate input collection for all arguments' combinations
 input_collection = []
-for test, control in CONTRASTS_LEVELS:
-    exp_name = f"{exp_prefix}_{test}_vs_{control}"
-    results_file = DESEQ2_ROOT.joinpath(f"{exp_name}_deseq_results_unique.csv")
+results_file = DESEQ2_ROOT.joinpath(f"{exp_prefix}_deseq_results_unique.csv")
 
-    if not results_file.exists():
-        continue
-
-    # 1.1. Add GSEA inputs
+# 1.1. Add GSEA inputs
+if results_file.exists():
     input_collection.append(
         dict(
             data_type="diff_expr",
             func_path=FUNC_PATH,
             plots_path=PLOTS_PATH,
             results_file=results_file,
-            exp_name=exp_name,
+            exp_name=exp_prefix,
             org_db=org_db,
             analysis_type="gsea",
         )
     )
 
-    # 1.2. Add ORA inputs
-    for p_col, p_th, lfc_level, lfc_th in product(P_COLS, P_THS, LFC_LEVELS, LFC_THS):
-        p_thr_str = str(p_th).replace(".", "_")
-        lfc_thr_str = str(lfc_th).replace(".", "_")
-        input_collection.append(
-            dict(
-                data_type="diff_expr",
-                func_path=FUNC_PATH,
-                plots_path=PLOTS_PATH,
-                results_file=results_file,
-                exp_name=f"{exp_name}_{p_col}_{p_thr_str}_{lfc_level}_{lfc_thr_str}",
-                org_db=org_db,
-                cspa_surfaceome_file=STORAGE.joinpath(
-                    "CSPA_validated_surfaceome_proteins_human.csv"
-                ),
-                p_col=p_col,
-                p_th=p_th,
-                lfc_col="log2FoldChange",
-                lfc_level=lfc_level,
-                lfc_th=lfc_th,
-                numeric_col="log2FoldChange",
-                analysis_type="ora",
-            )
+# 1.2. Add ORA inputs
+for p_col, p_th, lfc_level, lfc_th in product(P_COLS, P_THS, LFC_LEVELS, LFC_THS):
+    p_thr_str = str(p_th).replace(".", "_")
+    lfc_thr_str = str(lfc_th).replace(".", "_")
+    input_collection.append(
+        dict(
+            data_type="diff_expr",
+            func_path=FUNC_PATH,
+            plots_path=PLOTS_PATH,
+            results_file=results_file,
+            exp_name=f"{exp_prefix}_{p_col}_{p_thr_str}_{lfc_level}_{lfc_thr_str}",
+            org_db=org_db,
+            cspa_surfaceome_file=STORAGE.joinpath(
+                "CSPA_validated_surfaceome_proteins_human.csv"
+            ),
+            p_col=p_col,
+            p_th=p_th,
+            lfc_col="log2FoldChange",
+            lfc_level=lfc_level,
+            lfc_th=lfc_th,
+            numeric_col="log2FoldChange",
+            analysis_type="ora",
         )
+    )
 
 # 2. Run functional enrichment analysis
 if __name__ == "__main__":
