@@ -96,21 +96,15 @@ for (
     lfc_thr_str = str(lfc_th).replace(".", "_")
     exp_name = f"{exp_prefix}_{p_col}_{p_thr_str}_{lfc_level}_{lfc_thr_str}"
 
-    degs_file = (
-        DATA_ROOT.joinpath("deseq2_lrt")
-        .joinpath("set1_6222")
-        .joinpath(f"{exp_name}_deseq_results_unique.csv")
+    degs_file = DATA_ROOT.joinpath("deseq2").joinpath(
+        f"{exp_name}_deseq_results_unique.csv"
     )
     if not degs_file.exists():
         continue
 
     input_collection.append(
         dict(
-            data_file=DATA_ROOT.joinpath("deseq2_lrt")
-            .joinpath("set1_6222")
-            .joinpath(
-                "vsd_filtered_LRT_reduced_design_sample_types_hspc+mcrpc+norm+prim.csv"
-            ),
+            data_file=DATA_ROOT.joinpath("deseq2").joinpath(f"{exp_prefix}_vst.csv"),
             wgcna_path=(
                 WGCNA_ROOT.joinpath(exp_name).joinpath(
                     "iterative" if iterative else "standard"
