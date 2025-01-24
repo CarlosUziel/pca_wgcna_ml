@@ -37,7 +37,7 @@ python functional_analysis/run/rna_seq/pcta_wcdt_gse221601_lrt/lrt_wgcna.py
 # pcta_wcdt_gse221601_filtered
 
 # Differential Expression Analysis
-python differential_expression/run/pcta_wcdt_gse221601_filtered/contrasts.py
+python functional_analysis/run/rna_seq/pcta_wcdt_gse221601_filtered/contrasts.py
 
 # WGCNA Analysis
 python wgcna/run/rna_seq/pcta_wcdt_gse221601_filtered/contrasts.py
