@@ -45,16 +45,16 @@ SAMPLE_CONTRAST_FACTOR: str = "sample_type"
 CONTRASTS_LEVELS: Iterable[Tuple[str, str]] = [
     ("prim", "norm"),
     ("hspc", "prim"),
+    ("mcrpc", "hspc"),
     ("mcrpc", "prim"),
-    ("hspc", "mcrpc"),
 ]
 CONTRAST_COMPARISONS: Dict[str, Iterable[Iterable[str]]] = {
-    "comparison_1": (("prim", "norm"), ("hspc", "prim")),
-    "comparison_2": (("prim", "norm"), ("mcrpc", "prim")),
-    "comparison_3": (("prim", "norm"), ("hspc", "mcrpc")),
-    "comparison_4": (("hspc", "prim"), ("mcrpc", "prim")),
-    "comparison_5": (("hspc", "prim"), ("hspc", "mcrpc")),
-    "comparison_6": (("mcrpc", "prim"), ("hspc", "mcrpc")),
+    "comparison_0": (
+        ("prim", "norm"),
+        ("hspc", "prim"),
+        ("mcrpc", "hspc"),
+        ("mcrpc", "prim"),
+    ),
 }
 P_COLS: Iterable[str] = ["padj"]
 P_THS: Iterable[float] = (0.05,)

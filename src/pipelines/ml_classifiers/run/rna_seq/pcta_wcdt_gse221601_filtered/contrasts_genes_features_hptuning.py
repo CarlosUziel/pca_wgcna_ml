@@ -51,8 +51,8 @@ SAMPLE_CONTRAST_FACTOR: str = "sample_type"
 CONTRASTS_LEVELS: Iterable[Tuple[str, str]] = [
     ("prim", "norm"),
     ("hspc", "prim"),
+    ("mcrpc", "hspc"),
     ("mcrpc", "prim"),
-    ("hspc", "mcrpc"),
 ]
 CONTRASTS_LEVELS_COLORS: Dict[str, str] = {
     "norm": "#1A6566",

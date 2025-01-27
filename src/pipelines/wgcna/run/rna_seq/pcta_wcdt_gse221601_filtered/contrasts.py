@@ -53,8 +53,8 @@ SAMPLE_CONTRAST_FACTOR: str = "sample_type"
 CONTRASTS_LEVELS: Iterable[Tuple[str, str]] = [
     ("prim", "norm"),
     ("hspc", "prim"),
+    ("mcrpc", "hspc"),
     ("mcrpc", "prim"),
-    ("hspc", "mcrpc"),
 ]
 P_COLS: Iterable[str] = ["padj"]
 P_THS: Iterable[float] = (0.05,)
