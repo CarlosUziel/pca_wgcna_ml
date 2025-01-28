@@ -58,7 +58,7 @@ PARALLEL: bool = True
 
 
 exp_prefix = (
-    "Sig_res_LRT_across_sample_types_overall_effects_hspc+mcrpc+norm+prim_1232samples"
+    "res_LRT_across_sample_types_overall_effects_hspc+mcrpc+norm+prim_1232samples"
 )
 org_db = OrgDB(SPECIES)
 

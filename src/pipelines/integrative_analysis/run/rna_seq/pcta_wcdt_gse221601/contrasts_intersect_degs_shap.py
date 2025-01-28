@@ -46,14 +46,12 @@ CONTRASTS_LEVELS: Iterable[Tuple[str, str]] = [
     ("prim", "norm"),
     ("hspc", "prim"),
     ("mcrpc", "hspc"),
-    ("mcrpc", "prim"),
 ]
 CONTRAST_COMPARISONS: Dict[str, Iterable[Iterable[str]]] = {
     "comparison_0": (
         ("prim", "norm"),
         ("hspc", "prim"),
         ("mcrpc", "hspc"),
-        ("mcrpc", "prim"),
     ),
 }
 P_COLS: Iterable[str] = ["padj"]

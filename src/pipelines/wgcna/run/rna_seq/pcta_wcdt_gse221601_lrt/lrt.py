@@ -53,7 +53,6 @@ CONTRASTS_LEVELS: Iterable[Tuple[str, str]] = [
     ("prim", "norm"),
     ("hspc", "prim"),
     ("mcrpc", "hspc"),
-    ("mcrpc", "prim"),
 ]
 P_COLS: Iterable[str] = ["padj"]
 P_THS: Iterable[float] = (0.05,)
@@ -70,7 +69,7 @@ annot_df = pd.read_csv(ANNOT_PATH, index_col=0)
 
 contrast_conditions = sorted(set(chain(*CONTRASTS_LEVELS)))
 exp_prefix = (
-    "Sig_res_LRT_across_sample_types_overall_effects_hspc+mcrpc+norm+prim_1232samples"
+    "res_LRT_across_sample_types_overall_effects_hspc+mcrpc+norm+prim_1232samples"
 )
 org_db = OrgDB(SPECIES)
 
