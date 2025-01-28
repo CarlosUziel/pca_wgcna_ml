@@ -54,10 +54,10 @@ CONTRASTS_LEVELS: Iterable[Tuple[str, str]] = [
     ("mcrpc", "hspc"),
 ]
 CONTRASTS_LEVELS_COLORS: Dict[str, str] = {
-    "norm": "#1A6566",
-    "prim": "#21445B",
-    "hspc": "#323050",
-    "mcrpc": "#45214A",
+    "mcrpc": "#8B3A3A",
+    "prim": "#4A708B",
+    "hspc": "#8B008B",
+    "norm": "#9ACD32",
 }
 P_COLS: Iterable[str] = ["padj"]
 P_THS: Iterable[float] = (0.05,)
