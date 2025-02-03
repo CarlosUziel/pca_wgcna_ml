@@ -143,3 +143,7 @@ dmypy.json
 # logs
 /logs
 *.log
+
+# vscode
+.vscode/
+.ruff_cache/
