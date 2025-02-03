@@ -3,6 +3,7 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Iterable, Optional, Tuple, Union
 
+import numpy as np
 import pandas as pd
 import rpy2.robjects as ro
 from sklearn import preprocessing
@@ -15,32 +16,59 @@ from r_wrappers.msigdb import get_msigb_gene_sets
 from r_wrappers.utils import map_gene_id, pd_df_to_rpy2_df, rpy2_df_to_pd_df
 
 
-def process_gene_count_data(
-    counts_file: Path,
-    annot_df: Path,
-    contrast_factor: str,
-    org_db: OrgDB,
-    custom_genes_file: Path = None,
-    exclude_genes: Iterable[str] = None,
-) -> Tuple[pd.DataFrame, Iterable[int], Iterable[str], pd.DataFrame]:
-    """Perform multiple pre-processing on gene expression data.
+def _validate_binary_classes(labels: pd.Series) -> None:
+    """Validate that data contains exactly two unique classes.
 
     Args:
-        counts_file: A .csv file containing expression data of shape
-            [n_genes, n_samples]
-        annot_df: A pandas Dataframe containing samples annotations.
-        contrast_factor: Column name containing the classes used for classification.
-        org_db: Organism annotation database.
-        custom_genes_path: A .csv file where the first column is a list of relevant
-            ENSEMBL IDs genes, such as DEGs.
-        exclude_genes: ENSEMBL ID genes to remove from data.
+        labels: Series of class labels
+
+    Raises:
+        ValueError: If number of unique classes is not 2
+    """
+    unique_classes = labels.unique()
+    if len(unique_classes) != 2:
+        raise ValueError(
+            f"Only binary classification is supported. Found {len(unique_classes)} "
+            f"classes: {sorted(unique_classes)}"
+        )
+
+
+def process_gene_count_data(
+    counts: Union[Path, pd.DataFrame],
+    annot_df: pd.DataFrame,
+    contrast_factor: str,
+    org_db: OrgDB,
+    custom_features: Optional[pd.DataFrame] = None,
+    custom_features_gene_type: Optional[str] = "ENTREZID",
+    exclude_features: Optional[Iterable[str]] = None,
+) -> Tuple[
+    pd.DataFrame, np.ndarray, pd.Series, pd.DataFrame, preprocessing.LabelEncoder
+]:
+    """Process gene expression data for machine learning analysis.
+
+    Args:
+        counts: Gene expression matrix [n_genes, n_samples] as file or DataFrame
+        annot_df: Sample annotations with class labels
+        contrast_factor: Column name in annot_df containing class labels
+        org_db: Organism annotation database for gene ID mapping
+        custom_features: Optional DataFrame with gene annotations (ENTREZID index)
+        custom_features_gene_type: Type of gene IDs in custom_features index
+        exclude_features: Optional list of gene IDs to exclude
 
     Returns:
-        Processed data.
+        Tuple containing:
+        - Processed expression matrix [n_samples, n_genes] scaled 0-1
+        - Array of encoded class labels
+        - Boolean Series indicating which genes had overlapping expression ranges
+        - DataFrame with original value ranges per gene per class
+        - Fitted LabelEncoder for mapping class labels to integers
+
+    Raises:
+        AssertionError: If counts or annotations are empty
     """
     # 1. Data
     # 1.1. Loading
-    counts_df = pd.read_csv(counts_file, index_col=0).transpose()
+    counts_df = pd.read_csv(counts, index_col=0).transpose()
 
     assert not counts_df.empty and not annot_df.empty, (
         "Counts or annotation dataframes are empty."
@@ -51,31 +79,34 @@ def process_gene_count_data(
     counts_df = counts_df.loc[common_idxs, :]
     annot_df = annot_df.loc[common_idxs, :]
 
-    assert len(set(annot_df[contrast_factor])) == 2, (
-        "Classes were lost after unifying count and annotation data. Please check input"
-        " data."
-    )
-
-    # 1.3. Build class labels
+    # 1.3. Build class labels and validate binary classification
+    _validate_binary_classes(annot_df[contrast_factor])
     label_encoder = preprocessing.LabelEncoder()
     class_labels = label_encoder.fit_transform(annot_df[contrast_factor])
 
-    # 2. Select genes
-    if custom_genes_file is not None:
-        custom_genes_df = pd.read_csv(custom_genes_file, index_col=0)
+    # 2. Gene selection
+    # 2.1. Map genes in counts_df to ENTREZID
+    counts_df.columns = map_gene_id(
+        counts_df.columns, org_db, "ENSEMBL", custom_features_gene_type
+    ).astype(str)
+    # get rid of non-uniquely mapped transcripts
+    counts_df = counts_df.loc[:, ~counts_df.columns.str.contains("/", na=False)]
+    # remove all transcripts that share ENTREZIDs IDs
+    counts_df = counts_df.loc[:, counts_df.columns.dropna().drop_duplicates(keep=False)]
 
-        genes = (
-            custom_genes_df.index if not custom_genes_df.empty else counts_df.columns
+    # 2.2. Select gene list
+    genes = custom_features.index if custom_features is not None else counts_df.columns
+
+    if exclude_features:
+        genes = [gene for gene in genes if gene not in exclude_features]
+
+    # 2.3. Filter genes based on IDs and names
+    genes = [
+        str(gene)
+        for gene in filter_genes_wrt_annotation(
+            genes, org_db, custom_features_gene_type
         )
-
-    else:
-        genes = counts_df.columns
-
-    if exclude_genes:
-        genes = [gene for gene in genes if gene not in exclude_genes]
-
-    # 2.1. Filter genes based on IDs and names
-    genes = filter_genes_wrt_annotation(genes, org_db, "ENSEMBL")
+    ]
 
     try:
         counts_df = counts_df.loc[:, genes]
@@ -85,20 +116,14 @@ def process_gene_count_data(
         )
         counts_df = counts_df.loc[:, counts_df.columns.intersection(set(genes))]
 
-    # 2.2. Get ENTREZID genes IDs
-    counts_df.columns = map_gene_id(counts_df.columns, org_db, "ENSEMBL", "ENTREZID")
-    # get rid of non-uniquely mapped transcripts
-    counts_df = counts_df.loc[:, ~counts_df.columns.str.contains("/", na=False)]
-    # remove all transcripts that share ENTREZIDs IDs
-    counts_df = counts_df.loc[:, counts_df.columns.dropna().drop_duplicates(keep=False)]
-
     # 3. Remove non-overlapping genes
+    class_sample_groups = [
+        annot_df[annot_df[contrast_factor] == class_label].index
+        for class_label in label_encoder.classes_
+    ]
+
     overlapping_genes, counts_df_ranges = get_overlapping_features(
-        counts_df,
-        [
-            annot_df[annot_df[contrast_factor] == class_label].index
-            for class_label in label_encoder.classes_
-        ],
+        counts_df, class_sample_groups, class_names=label_encoder.classes_
     )
 
     counts_df = counts_df.loc[:, overlapping_genes]
@@ -115,31 +140,44 @@ def process_gene_count_data(
 
 def get_gene_set_expression_data(
     counts: Union[Path, pd.DataFrame],
-    annot_df: Path,
+    annot_df: pd.DataFrame,
     org_db: OrgDB,
     msigdb_cat: str,
     contrast_factor: Optional[str] = None,
-    custom_genes_file: Path = None,
-    exclude_genes: Iterable[str] = None,
+    custom_features: Optional[Path] = None,
+    exclude_genes: Optional[Iterable[str]] = None,
     gsva_threads: int = 8,
     remove_overlapping: bool = False,
-) -> Tuple[pd.DataFrame, Iterable[int], Iterable[str], pd.DataFrame]:
-    """Transform a expression data matrix from a gene by sample matrix to a
-    gene-set by sample matrix.
+) -> Tuple[
+    pd.DataFrame,
+    Optional[np.ndarray],
+    Optional[pd.Series],
+    Optional[pd.DataFrame],
+    Optional[preprocessing.LabelEncoder],
+]:
+    """Transform gene expression to gene-set enrichment scores.
 
     Args:
-        counts_file: A .csv file containing raw expression data of shape
-            [n_genes, n_samples].
-        annot_df: A pandas Dataframe containing samples annotations.
-        org_db: Organism annotation database.
-        msigdb_cat: Category of MSigDB to extract the gene sets from.
-        contrast_factor: Column name containing the classes used for classification.
-        custom_genes_path: A .csv file where the first column is a list of relevant
-            ENSEMBL IDs genes, such as DEGs.
-        exclude_genes: ENSEMBL ID genes to remove from data.
+        counts: Gene expression matrix [n_genes, n_samples] as file or DataFrame
+        annot_df: Sample annotations
+        org_db: Organism annotation database
+        msigdb_cat: MSigDB category (H or C1-C8)
+        contrast_factor: Optional column in annot_df with class labels
+        custom_features: Optional path to CSV with subset of genes
+        exclude_genes: Optional list of gene IDs to exclude
+        gsva_threads: Number of threads for GSVA computation
+        remove_overlapping: Whether to remove non-overlapping gene sets
 
     Returns:
-        Processed data.
+        Tuple containing:
+            - Gene set enrichment matrix [n_samples, n_gene_sets]
+            - Optional array of encoded class labels (if contrast_factor provided)
+            - Optional Series indicating overlapping gene sets
+            - Optional DataFrame with original value ranges
+            - Optional fitted LabelEncoder for classes
+
+    Raises:
+        AssertionError: If MSigDB category invalid or input data empty
     """
     # 0. Setup
     assert msigdb_cat in (
@@ -176,8 +214,8 @@ def get_gene_set_expression_data(
         label_encoder, class_labels = (None, None)
 
     # 2. Select genes
-    if custom_genes_file is not None:
-        custom_genes_df = pd.read_csv(custom_genes_file, index_col=0)
+    if custom_features is not None:
+        custom_genes_df = pd.read_csv(custom_features, index_col=0)
         genes = custom_genes_df.index if not custom_genes_df.empty else counts_df.index
     else:
         genes = counts_df.index
@@ -249,27 +287,34 @@ def get_gene_set_expression_data(
 
 def process_probes_meth_data(
     meth_values_file: Path,
-    annot_df: Path,
+    annot_df: pd.DataFrame,
     contrast_factor: str,
     org_db: OrgDB,
-    custom_meth_probes_file: Path,
-    exclude_genes: Iterable[str] = None,
-) -> Tuple[pd.DataFrame, Iterable[int], Iterable[str], pd.DataFrame]:
-    """Perform multiple pre-processing on gene expression data.
+    custom_features: Path,
+    exclude_genes: Optional[Iterable[str]] = None,
+) -> Tuple[
+    pd.DataFrame, np.ndarray, pd.Series, pd.DataFrame, preprocessing.LabelEncoder
+]:
+    """Process methylation probe data for machine learning.
 
     Args:
-        meth_values_file: A .csv file containing either methylation B-values or M-values
-            with shape [#probes, #samples]
-        annot_df: A pandas Dataframe containing samples annotations.
-        contrast_factor: Column name containing the classes used for classification.
-        org_db: Organism annotation database.
-        custom_meth_probes_file: A .csv file with pre-selected differentially methylated
-            probes, annotated to gene regions.
-        exclude_genes: ENTREZ ID genes to remove from data. Only has an effect if
-            `custom_meth_probes_file` is provided.
+        meth_values_file: Methylation values matrix [n_probes, n_samples]
+        annot_df: Sample annotations with class labels
+        contrast_factor: Column name in annot_df containing class labels
+        org_db: Organism annotation database
+        custom_features: Path to CSV with probe annotations
+        exclude_genes: Optional list of gene IDs to exclude
 
     Returns:
-        Processed data.
+        Tuple containing:
+            - Processed methylation matrix [n_samples, n_probes]
+            - Array of encoded class labels
+            - Series indicating which probes had overlapping values
+            - DataFrame with original value ranges per probe
+            - Fitted LabelEncoder for class labels
+
+    Raises:
+        AssertionError: If input data empty or samples don't match
     """
     # 1. Data
     # 1.1. Loading
@@ -284,12 +329,13 @@ def process_probes_meth_data(
     meth_values_df = meth_values_df.loc[common_idxs, :]
     annot_df = annot_df.loc[common_idxs, :]
 
-    # 1.3. Filter by class samples and build class labels
+    # 1.3. Build class labels and validate binary classification
+    _validate_binary_classes(annot_df[contrast_factor])
     label_encoder = preprocessing.LabelEncoder()
     class_labels = label_encoder.fit_transform(annot_df[contrast_factor])
 
     # 2. Select genes
-    custom_meth_genes = pd.read_csv(custom_meth_probes_file, index_col=0).dropna(
+    custom_meth_genes = pd.read_csv(custom_features, index_col=0).dropna(
         subset="annot.gene_id"
     )
     custom_meth_genes["annot.gene_id"] = (
@@ -342,24 +388,32 @@ def process_probes_meth_data(
 
 def process_gene_sets_data(
     data: pd.DataFrame,
-    annot_df: Path,
+    annot_df: pd.DataFrame,
     contrast_factor: str,
-    custom_gene_sets_file: Path = None,
-    exclude_gene_sets: Iterable[str] = None,
-) -> Tuple[pd.DataFrame, Iterable[int], pd.Series, pd.DataFrame]:
-    """Perform multiple pre-processing on gene sets enrichment data.
+    custom_features: Optional[Path] = None,
+    exclude_gene_sets: Optional[Iterable[str]] = None,
+) -> Tuple[
+    pd.DataFrame, np.ndarray, pd.Series, pd.DataFrame, preprocessing.LabelEncoder
+]:
+    """Process gene set enrichment data for machine learning.
 
     Args:
-        counts_file: A .csv file containing GSVA enrichment scores data of shape
-            [n_gene_sets, n_samples]
-        annot_df: A pandas Dataframe containing samples annotations.
-        contrast_factor: Column name containing the classes used for classification.
-        custom_gene_sets_file: A .csv file where the first column represent gene set
-            names.
-        exclude_gene_sets: Gene set names to remove from the data.
+        data: Enrichment scores matrix [n_gene_sets, n_samples]
+        annot_df: Sample annotations with class labels
+        contrast_factor: Column name in annot_df containing class labels
+        custom_features: Optional path to CSV with gene set subset
+        exclude_gene_sets: Optional list of gene set names to exclude
 
     Returns:
-        Processed data.
+        Tuple containing:
+            - Processed enrichment matrix [n_samples, n_gene_sets] scaled 0-1
+            - Array of encoded class labels
+            - Series indicating which gene sets had overlapping scores
+            - DataFrame with original value ranges per gene set
+            - Fitted LabelEncoder for class labels
+
+    Raises:
+        AssertionError: If input data empty or samples don't match
     """
     # 1. Data
     # 1.1. Loading
@@ -374,18 +428,14 @@ def process_gene_sets_data(
     data_df = data.loc[common_idxs, :]
     annot_df = annot_df.loc[common_idxs, :]
 
-    assert len(set(annot_df[contrast_factor])) == 2, (
-        "Classes were lost after unifying count and annotation data. Please check input"
-        " data."
-    )
-
-    # 1.3. Build class labels
+    # Remove old assertion and use new validation
+    _validate_binary_classes(annot_df[contrast_factor])
     label_encoder = preprocessing.LabelEncoder()
     class_labels = label_encoder.fit_transform(annot_df[contrast_factor])
 
     # 2. Select genes
-    if custom_gene_sets_file is not None:
-        custom_gene_sets_df = pd.read_csv(custom_gene_sets_file, index_col=0)
+    if custom_features is not None:
+        custom_gene_sets_df = pd.read_csv(custom_features, index_col=0)
 
         gene_sets = (
             custom_gene_sets_df.index

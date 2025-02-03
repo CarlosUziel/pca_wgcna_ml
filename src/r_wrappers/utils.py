@@ -165,7 +165,7 @@ def annotate_deseq_result(
             axis=1,
         )
     except Exception as e:
-        logging.warn(e)
+        logging.warning(e)
         feature_annotations = pd.DataFrame(
             index=result_df.index,
             columns=to_types,

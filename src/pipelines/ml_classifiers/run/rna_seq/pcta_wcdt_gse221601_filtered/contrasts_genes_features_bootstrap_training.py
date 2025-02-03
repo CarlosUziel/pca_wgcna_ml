@@ -53,35 +53,41 @@ CONTRASTS_LEVELS: Iterable[Tuple[str, str]] = [
     ("hspc", "prim"),
     ("mcrpc", "hspc"),
 ]
-P_COLS: Iterable[str] = ["padj"]
-P_THS: Iterable[float] = (0.05,)
-LFC_LEVELS: Iterable[str] = ("all", "up", "down")
-LFC_THS: Iterable[float] = (1.0,)
 SPECIES: str = "Homo sapiens"
-CLASSIFIER_NAMES: Iterable[str] = ("decision_tree", "random_forest")
+CLASSIFIER_NAMES: Iterable[str] = (
+    "decision_tree",
+    "random_forest",
+    "light_gbm",
+    "mlp",
+    "tabpfn",
+)
 BOOTSTRAP_ITERATIONS: int = 10000
-PARALLEL: bool = True
+PARALLEL: bool = False
 
 contrast_conditions = sorted(set(chain(*CONTRASTS_LEVELS)))
 exp_prefix = f"{SAMPLE_CONTRAST_FACTOR}_{'+'.join(contrast_conditions)}_"
+results_prefix = (
+    "comparison_0_padj_0_05_up_1_0_bicor_signed_intersecting_wgcna_M3+M2+M1_ENTREZID_22"
+)
 org_db = OrgDB(SPECIES)
 annot_df = pd.read_csv(ANNOT_PATH, index_col=0)
 
+wgcna_ml_results = pd.read_csv(
+    DATA_ROOT
+    / "integrative_analysis"
+    / "intersecting_wgcna"
+    / Path(results_prefix).with_suffix(".csv"),
+    index_col=0,
+)
+wgcna_ml_results_filt = wgcna_ml_results.loc[
+    wgcna_ml_results["prim_vs_norm_M3"]
+    & wgcna_ml_results["hspc_vs_prim_M2"]
+    & wgcna_ml_results["mcrpc_vs_hspc_M1"]
+]
+
 input_collection = []
-for (test, control), p_col, p_th, lfc_level, lfc_th, classifier_name in product(
-    CONTRASTS_LEVELS, P_COLS, P_THS, LFC_LEVELS, LFC_THS, CLASSIFIER_NAMES
-):
-    p_thr_str = str(p_th).replace(".", "_")
-    lfc_thr_str = str(lfc_th).replace(".", "_")
-    exp_name = (
-        f"{exp_prefix}_{test}_vs_{control}_"
-        + f"{p_col}_{p_thr_str}_{lfc_level}_{lfc_thr_str}"
-    )
-
-    custom_genes_file = DESEQ2_ROOT.joinpath(f"{exp_name}_deseq_results_unique.csv")
-
-    if not custom_genes_file.exists():
-        continue
+for (test, control), classifier_name in product(CONTRASTS_LEVELS, CLASSIFIER_NAMES):
+    exp_name = f"{exp_prefix}_{test}_vs_{control}_{results_prefix}"
 
     annot_df_contrasts = deepcopy(
         annot_df[annot_df[SAMPLE_CONTRAST_FACTOR].isin((test, control))]
@@ -89,29 +95,28 @@ for (test, control), p_col, p_th, lfc_level, lfc_th, classifier_name in product(
 
     input_collection.append(
         dict(
-            data_type="gene_expr",
-            features_type="genes",
-            classifier_name=classifier_name,
             data=(DESEQ2_ROOT.joinpath(f"{exp_prefix}_vst.csv")),
             annot_df=annot_df_contrasts,
             contrast_factor=SAMPLE_CONTRAST_FACTOR,
+            org_db=org_db,
+            classifier_name=classifier_name,
             hparams_file=(
                 DATA_ROOT.joinpath("ml_classifiers")
-                .joinpath(exp_name)
+                .joinpath(results_prefix)
                 .joinpath(classifier_name)
                 .joinpath("genes_features")
                 .joinpath("tuning")
                 .joinpath("best_hparams.json")
             ),
-            org_db=org_db,
             results_path=(
                 DATA_ROOT.joinpath("ml_classifiers")
-                .joinpath(exp_name)
+                .joinpath(results_prefix)
                 .joinpath(classifier_name)
                 .joinpath("genes_features")
                 .joinpath("bootstrap")
             ),
-            custom_features_file=custom_genes_file,
+            custom_features=wgcna_ml_results_filt,
+            custom_features_gene_type="ENTREZID",
             bootstrap_iterations=BOOTSTRAP_ITERATIONS,
             random_seed=8080,
         )

@@ -30,8 +30,7 @@ bioconductor-rgreat bioconductor-org.mm.eg.db r-r.filesets python-docx
 
 conda activate bioinfo
 
-pip install fasttreeshap
-pip install node2vec
+pip install fasttreeshap node2vec shapiq tabpfn
 
 python -m nltk.downloader all
 

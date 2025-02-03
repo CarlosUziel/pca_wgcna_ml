@@ -81,7 +81,7 @@ def proc_diff_expr_dataset_plots(
     try:
         counts_df.index = map_gene_id(counts_df.index, org_db, "ENSEMBL", "SYMBOL")
     except Exception as e:
-        logging.warn(e)
+        logging.warning(e)
 
     # get rid of non-uniquely mapped transcripts
     counts_df = counts_df.loc[~counts_df.index.str.contains("/", na=False)]
