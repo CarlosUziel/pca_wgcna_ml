@@ -88,39 +88,35 @@ def get_classifier(
     Raises:
         ValueError: If classifier_name is not recognized
     """
-    if "random_state" not in kwargs:
-        kwargs["random_state"] = random_seed
-    if "n_jobs" not in kwargs and classifier_name in [
-        "random_forest",
-        "light_gbm",
-        "xgboost",
-    ]:
-        kwargs["n_jobs"] = n_jobs
+    # Set default parameters
+    params = kwargs.copy()
+    params.setdefault("random_state", random_seed)
 
+    if classifier_name in ["random_forest", "light_gbm", "xgboost"]:
+        params.setdefault("n_jobs", n_jobs)
+
+    # Configure classifier-specific defaults
     if classifier_name == "decision_tree":
-        return DecisionTreeClassifier(**kwargs)
+        return DecisionTreeClassifier(**params)
     elif classifier_name == "random_forest":
-        return RandomForestClassifier(**kwargs)
+        return RandomForestClassifier(**params)
     elif classifier_name == "light_gbm":
-        return LGBMClassifier(
-            device="cpu",
-            verbose=-1,
-            min_gain_to_split=0,
-            **kwargs,
-        )
+        params.setdefault("device", "cpu")
+        params.setdefault("verbose", -1)
+        params.setdefault("min_gain_to_split", 0)
+        return LGBMClassifier(**params)
     elif classifier_name == "xgboost":
-        return XGBClassifier(
-            eval_metric="logloss",
-            tree_method="hist",
-            device="cpu",
-            **kwargs,
-        )
+        params.setdefault("eval_metric", "logloss")
+        params.setdefault("tree_method", "hist")
+        params.setdefault("device", "cpu")
+        return XGBClassifier(**params)
     elif classifier_name == "nu_svc":
-        return NuSVC(**kwargs)
+        return NuSVC(**params)
     elif classifier_name == "mlp":
-        return MLPClassifier(**kwargs)
+        return MLPClassifier(**params)
     elif classifier_name == "tabpfn":
-        return TabPFNClassifier(device="cpu", **kwargs)
+        params.setdefault("device", "cpu")
+        return TabPFNClassifier(**params)
     else:
         raise ValueError(f"Unsupported classifier: {classifier_name}")
 
@@ -415,12 +411,16 @@ def bootstrap_relevant_features(
             for order in range(1, 6):
                 try:
                     # Get SHAP values for this iteration
-                    interactions = np.stack(
-                        [
-                            explainer.explain(sample).get_n_order_values(order)
-                            for sample in np.ascontiguousarray(counts_df)
-                        ]
-                    )
+                    interactions = []
+                    for sample in np.ascontiguousarray(counts_df):
+                        shap_values = explainer.explain(sample).get_n_order_values(
+                            order
+                        )
+                        # Reshape to handle single-feature case
+                        if len(shap_values.shape) == 1:
+                            shap_values = shap_values.reshape(-1, 1)
+                        interactions.append(shap_values)
+                    interactions = np.stack(interactions)
 
                     # Update running average
                     if n_successful == 0:
@@ -653,9 +653,10 @@ def create_second_order_shap_plots(
 
     # 2. Top interactions bar plot
     try:
-        # Get top interactions
+        # Get total effect per feature by summing all its interactions
         abs_interactions = np.abs(interaction_values)
-        total_effect = np.sum(abs_interactions, axis=1)
+        # For [n_samples, n_features, n_features], sum over samples and pairs
+        total_effect = np.sum(abs_interactions, axis=(0, 2))
         top_idx = np.argsort(total_effect)[-max_display:]
 
         plt.figure(figsize=(10, 6))
@@ -700,21 +701,26 @@ def save_model_results(
         Per-sample values and summary statistics for each interaction order
         See function docstring for complete file list
     """
-    feature_names = feature_annotations["SYMBOL"]
+    # Ensure indices match by converting both to strings
+    feature_annotations.index = feature_annotations.index.astype(str)
+    data_df_columns = data_df.columns.astype(str)
+
+    # Get annotations only for features present in data
+    valid_annotations = feature_annotations.loc[
+        feature_annotations.index.intersection(data_df_columns)
+    ]
+    feature_names = valid_annotations["SYMBOL"]
 
     # Save all interaction orders
     for order, interaction_iterations in shap_interactions.items():
         base_fname = f"{prefix}_shap_interactions_order_{order}"
 
         if order == 1:  # First order SHAP values
-            # Average across bootstrap iterations but keep sample dimension
-            shap_values = np.mean(
-                interaction_iterations, axis=0
-            )  # [n_samples, n_features]
+            print(interaction_iterations.shape, data_df.shape)
 
             # Save raw per-sample SHAP values
             pd.DataFrame(
-                shap_values,
+                interaction_iterations,
                 index=data_df.index,
                 columns=data_df.columns.astype(str),
             ).to_csv(results_path.joinpath(f"{base_fname}_per_sample.csv"))
@@ -722,10 +728,10 @@ def save_model_results(
             # Save feature-level summary statistics
             summary_stats = pd.DataFrame(
                 {
-                    "mean_abs_shap": np.abs(shap_values).mean(axis=0),
-                    "std_abs_shap": np.abs(shap_values).std(axis=0),
-                    "mean_shap": shap_values.mean(axis=0),
-                    "std_shap": shap_values.std(axis=0),
+                    "mean_abs_shap": np.abs(interaction_iterations).mean(axis=0),
+                    "std_abs_shap": np.abs(interaction_iterations).std(axis=0),
+                    "mean_shap": interaction_iterations.mean(axis=0),
+                    "std_shap": interaction_iterations.std(axis=0),
                 },
                 index=data_df.columns.astype(str),
             )
@@ -747,18 +753,15 @@ def save_model_results(
                     )
 
         else:  # Higher order interactions
-            # Average across bootstrap iterations
-            interactions_mean = np.mean(interaction_iterations, axis=0)
-
             if order == 2:  # Second order gets special treatment
                 pd.DataFrame(
-                    interactions_mean.mean(axis=0),  # Average across samples
+                    interaction_iterations.mean(axis=0),  # Average across samples
                     index=feature_names,
                     columns=feature_names,
                 ).to_csv(results_path.joinpath(f"{base_fname}.csv"))
 
             # Save raw arrays for all orders
-            np.save(results_path.joinpath(f"{base_fname}.npy"), interactions_mean)
+            np.save(results_path.joinpath(f"{base_fname}.npy"), interaction_iterations)
 
     # Save performance metrics
     pd.DataFrame(test_scores).transpose().sort_values(
@@ -812,16 +815,14 @@ def bootstrap_training(
     ####################################################################################
     # 1. Data
     # 1.1. Get pre-processed data, class labels and overlapping features
-    data_df, class_labels, overlapping_features, _, label_encoder = (
-        process_gene_count_data(
-            counts=data,
-            annot_df=annot_df,
-            contrast_factor=contrast_factor,
-            org_db=org_db,
-            custom_features=custom_features,
-            custom_features_gene_type=custom_features_gene_type,
-            exclude_features=exclude_features,
-        )
+    data_df, class_labels, overlapping_features, _, _ = process_gene_count_data(
+        counts=data,
+        annot_df=annot_df,
+        contrast_factor=contrast_factor,
+        org_db=org_db,
+        custom_features=custom_features,
+        custom_features_gene_type=custom_features_gene_type,
+        exclude_features=exclude_features,
     )
 
     if overlapping_features.empty:
@@ -835,11 +836,11 @@ def bootstrap_training(
     # Define model - Hyper-parameters extracted from grid-search tuning
     with hparams_file.open("r") as fh:
         params = json.load(fh)
-        # Update n_jobs in loaded parameters
+        # Update n_jobs in loaded parameters if not already present
         if classifier_name in ["random_forest", "light_gbm", "xgboost"]:
-            params["n_jobs"] = n_jobs
+            params.setdefault("n_jobs", n_jobs)
 
-        classifier = get_classifier(classifier_name, random_seed, n_jobs, **params)
+        classifier = get_classifier(classifier_name, random_seed, **params)
 
     test_scores, shap_interactions = bootstrap_relevant_features(
         counts_df=data_df,
@@ -851,6 +852,17 @@ def bootstrap_training(
     ####################################################################################
     # 3. Process and save results
     results_path.mkdir(exist_ok=True, parents=True)
+
+    # Ensure indices match
+    custom_features.index = custom_features.index.astype(str)
+    data_columns = data_df.columns.astype(str)
+    feature_annotations = custom_features.loc[
+        custom_features.index.intersection(data_columns)
+    ]
+
+    # Check if first order SHAP values need transposing
+    if shap_interactions[1].shape[0] != len(data_df.index):
+        shap_interactions[1] = shap_interactions[1].T
 
     # 3.1. Save all results
     prefix = f"bootstrap_{bootstrap_iterations}"
@@ -864,14 +876,12 @@ def bootstrap_training(
     )
 
     # 3.2. Create visualizations
-    feature_names = custom_features.loc[data_df.columns.astype(str)]["SYMBOL"]
-
     # First order SHAP plots
     try:
         first_order_plots = create_first_order_shap_plots(
             shap_values=shap_interactions[1],
             data_df=data_df,
-            feature_names=feature_names,
+            feature_names=feature_annotations["SYMBOL"],
             save_path=results_path,
             prefix=f"{prefix}_first_order",
             max_display=30,
@@ -887,7 +897,7 @@ def bootstrap_training(
     try:
         second_order_plots = create_second_order_shap_plots(
             interaction_values=shap_interactions[2],
-            feature_names=feature_names,
+            feature_names=feature_annotations["SYMBOL"],
             save_path=results_path,
             prefix=f"{prefix}_second_order",
             max_display=30,

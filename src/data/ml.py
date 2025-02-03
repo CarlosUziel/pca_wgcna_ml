@@ -20,10 +20,11 @@ def _validate_binary_classes(labels: pd.Series) -> None:
     """Validate that data contains exactly two unique classes.
 
     Args:
-        labels: Series of class labels
+        labels: Series of class labels from contrast_factor column
 
     Raises:
-        ValueError: If number of unique classes is not 2
+        ValueError: If number of unique classes is not 2, with message showing
+                  actual classes found
     """
     unique_classes = labels.unique()
     if len(unique_classes) != 2:

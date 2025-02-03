@@ -65,7 +65,6 @@ CLASSIFIER_NAMES: Iterable[str] = (
     "random_forest",
     "light_gbm",
     "mlp",
-    "tabpfn",
 )
 PARALLEL: bool = True
 

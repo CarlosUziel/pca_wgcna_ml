@@ -61,7 +61,7 @@ LFC_THS: Iterable[float] = (1.0,)
 NETWORK_TYPES: Iterable[str] = ("signed",)
 CORRELATION_TYPES: Iterable[str] = ("bicor",)
 CLASSIFIER_NAMES: Iterable[str] = ("decision_tree", "random_forest")
-BOOTSTRAP_ITERATIONS: int = 10000
+BOOTSTRAP_ITERATIONS: int = 4096
 SHAP_THS: Iterable[float] = (1e-4, 1e-5)
 PARALLEL: bool = True
 

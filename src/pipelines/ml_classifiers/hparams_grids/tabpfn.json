@@ -1,4 +1,4 @@
 {
-    "n_estimators": [3, 5, 10],
+    "n_estimators": [2, 4, 8],
     "balance_probabilities": [true, false]
 }

@@ -59,10 +59,9 @@ CLASSIFIER_NAMES: Iterable[str] = (
     "random_forest",
     "light_gbm",
     "mlp",
-    "tabpfn",
 )
-BOOTSTRAP_ITERATIONS: int = 10000
-PARALLEL: bool = False
+BOOTSTRAP_ITERATIONS: int = 8192
+PARALLEL: bool = True
 
 contrast_conditions = sorted(set(chain(*CONTRASTS_LEVELS)))
 exp_prefix = f"{SAMPLE_CONTRAST_FACTOR}_{'+'.join(contrast_conditions)}_"
@@ -102,7 +101,7 @@ for (test, control), classifier_name in product(CONTRASTS_LEVELS, CLASSIFIER_NAM
             classifier_name=classifier_name,
             hparams_file=(
                 DATA_ROOT.joinpath("ml_classifiers")
-                .joinpath(results_prefix)
+                .joinpath(exp_name)
                 .joinpath(classifier_name)
                 .joinpath("genes_features")
                 .joinpath("tuning")
@@ -110,7 +109,7 @@ for (test, control), classifier_name in product(CONTRASTS_LEVELS, CLASSIFIER_NAM
             ),
             results_path=(
                 DATA_ROOT.joinpath("ml_classifiers")
-                .joinpath(results_prefix)
+                .joinpath(exp_name)
                 .joinpath(classifier_name)
                 .joinpath("genes_features")
                 .joinpath("bootstrap")
@@ -118,6 +117,7 @@ for (test, control), classifier_name in product(CONTRASTS_LEVELS, CLASSIFIER_NAM
             custom_features=wgcna_ml_results_filt,
             custom_features_gene_type="ENTREZID",
             bootstrap_iterations=BOOTSTRAP_ITERATIONS,
+            n_jobs=4,
             random_seed=8080,
         )
     )
