@@ -58,7 +58,6 @@ CLASSIFIER_NAMES: Iterable[str] = (
     "decision_tree",
     "random_forest",
     "light_gbm",
-    "mlp",
 )
 BOOTSTRAP_ITERATIONS: int = 8192
 PARALLEL: bool = True

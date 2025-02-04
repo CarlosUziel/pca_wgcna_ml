@@ -5,6 +5,7 @@ import random
 import warnings
 from collections import defaultdict
 from copy import deepcopy
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Iterable, Optional, Tuple, Union
 
@@ -12,8 +13,6 @@ import numpy as np
 import pandas as pd
 import rpy2.robjects as ro
 import shap
-import shap.plots as shap_plots
-import shapiq
 from lightgbm import LGBMClassifier
 from matplotlib import pyplot as plt
 from sklearn.ensemble import RandomForestClassifier
@@ -66,27 +65,25 @@ def get_best_cv_indx(cv_results: Dict[str, np.ndarray]) -> int:
 def get_classifier(
     classifier_name: str, random_seed: int, n_jobs: int = 1, **kwargs
 ) -> Union[
-    RandomForestClassifier,
-    DecisionTreeClassifier,
-    XGBClassifier,
-    LGBMClassifier,
-    NuSVC,
-    MLPClassifier,
-    TabPFNClassifier,
+    RandomForestClassifier, DecisionTreeClassifier, XGBClassifier, LGBMClassifier
 ]:
-    """Create and configure a classifier instance.
+    """Create and configure a tree-based classifier instance for binary classification.
 
     Args:
-        classifier_name: Name of classifier to create
+        classifier_name: Name of classifier to create. One of:
+            - 'decision_tree'
+            - 'random_forest'
+            - 'light_gbm'
+            - 'xgboost'
         random_seed: Random seed for reproducibility
         n_jobs: Number of parallel jobs for supported classifiers
         **kwargs: Additional parameters to pass to classifier
 
     Returns:
-        Configured classifier instance
+        Configured tree-based classifier instance
 
     Raises:
-        ValueError: If classifier_name is not recognized
+        ValueError: If classifier_name is not one of the supported tree-based classifiers
     """
     # Set default parameters
     params = kwargs.copy()
@@ -137,6 +134,23 @@ def get_model_metrics(y_true: np.ndarray, y_pred: np.ndarray) -> Dict[str, float
         "f1": f1_score(y_true, y_pred, average="binary"),
         "balanced_accuracy": balanced_accuracy_score(y_true, y_pred),
     }
+
+
+def _validate_binary_classification(class_labels: np.ndarray) -> None:
+    """Validate that labels represent a binary classification problem.
+
+    Args:
+        class_labels: Array of class labels, expected to contain exactly 2 unique values
+
+    Raises:
+        ValueError: If not exactly 2 unique classes are found, with details about found classes
+    """
+    unique_classes = np.unique(class_labels)
+    if len(unique_classes) != 2:
+        raise ValueError(
+            "Expected binary classification (2 classes), "
+            f"got {len(unique_classes)} classes: {unique_classes}"
+        )
 
 
 def hparams_tuning(
@@ -194,6 +208,7 @@ def hparams_tuning(
             exclude_features=exclude_features,
         )
     )
+    _validate_binary_classification(class_labels)
 
     if overlapping_features.empty:
         logging.warning(
@@ -284,8 +299,10 @@ def hparams_tuning(
             show_column_names=False,
             cluster_columns=False,
             heatmap_legend_param=ro.r(
-                'list(title_position = "topcenter", color_bar = "continuous",'
-                ' legend_height = unit(5, "cm"), legend_direction = "horizontal")'
+                'list(title_position = "topcenter", '
+                'color_bar = "continuous", '
+                'legend_height = unit(5, "cm"), '
+                'legend_direction = "horizontal")'
             ),
         )
 
@@ -315,6 +332,22 @@ def hparams_tuning(
     ).to_csv(results_path.joinpath("cv_results.csv"))
 
 
+@dataclass
+class ShapResults:
+    """Container for SHAP values from tree-based binary classifiers.
+
+    Attributes:
+        values: Main SHAP values with shape [n_samples, n_features],
+               representing direct contribution of each feature to model output
+        interaction_values: SHAP interaction values with shape
+                          [n_samples, n_features, n_features], representing
+                          how features interact with each other
+    """
+
+    values: np.ndarray
+    interaction_values: np.ndarray
+
+
 def bootstrap_relevant_features(
     counts_df: pd.DataFrame,
     class_labels: np.ndarray,
@@ -323,46 +356,44 @@ def bootstrap_relevant_features(
         DecisionTreeClassifier,
         XGBClassifier,
         LGBMClassifier,
-        NuSVC,
-        MLPClassifier,
-        TabPFNClassifier,
     ],
     random_seeds: Union[int, Iterable[int]] = 100,
-) -> Tuple[Dict[int, Dict[str, float]], Dict[int, np.ndarray]]:
-    """Train a model multiple times to compute feature importance scores.
+) -> Tuple[Dict[int, Dict[str, float]], ShapResults]:
+    """Train a tree-based model multiple times to compute SHAP values and interactions.
 
     Args:
         counts_df: Input feature matrix [n_samples, n_features]
-        class_labels: Binary class labels [n_samples]
-        model: Pre-configured classifier instance for binary classification
+        class_labels: Binary class labels [n_samples], must contain exactly 2 unique values
+        model: Pre-configured tree-based classifier instance with predict_proba support
         random_seeds: Number of iterations or list of random seeds to use
 
     Returns:
         Tuple containing:
-        - Dict mapping seeds to performance metrics
-        - Dict mapping interaction order (1-5) to averaged arrays with shapes:
-            - order 1: [n_samples, n_features]
-            - order 2: [n_samples, n_features, n_features]
-            - order 3: [n_samples, n_features, n_features, n_features]
-            etc.
+        - Dict mapping random seeds to metrics (precision, recall, f1, balanced_accuracy)
+        - ShapResults containing averaged SHAP values across all iterations:
+            - values: Feature contributions [n_samples, n_features]
+            - interaction_values: Feature interactions [n_samples, n_features, n_features]
 
-    Note:
-        Arrays are averaged across bootstrap iterations but maintain sample dimension
+    Raises:
+        ValueError: If class_labels contains != 2 classes or model lacks predict_proba
+
+    Notes:
+        - Only tree-based models are supported for SHAP TreeExplainer compatibility
+        - Uses class 1 (positive class) SHAP values for binary classification
+        - Uses running average to compute final values using iteration index
+        - Any iteration failure will stop the entire process
     """
-    # 0. Setup
+    # 0. Setup and validation
+    _validate_binary_classification(class_labels)
+
+    # Validate model type and binary classification capability
+    if not hasattr(model, "predict_proba"):
+        raise ValueError(
+            f"Model {model.__class__.__name__} must support probability predictions "
+            "for SHAP values"
+        )
+
     test_scores = defaultdict(dict)
-    n_samples, n_features = counts_df.shape
-
-    # Initialize mean arrays for orders 1-5
-    shap_interactions_mean = {
-        order: np.zeros([n_samples] + [n_features] * order) for order in range(1, 6)
-    }
-    n_successful = 0
-
-    # Add warning filter within the function as well
-    warnings.filterwarnings(
-        "ignore", message="No further splits with positive gain", category=UserWarning
-    )
 
     # 1. Choose random_seeds
     random_seeds = (
@@ -371,9 +402,13 @@ def bootstrap_relevant_features(
         else random.sample(range(random_seeds * random_seeds), random_seeds)
     )
 
+    # Initialize outputs
+    shap_values_mean = None
+    shap_interactions_mean = None
+
     # 2. Bootstrap training
-    for i, random_seed in enumerate(random_seeds):
-        # 2.1. Set seeds to ensure reproducibility
+    for iteration, random_seed in enumerate(random_seeds):
+        # 2.1. Set seeds
         random.seed(random_seed)
         np.random.seed(random_seed)
 
@@ -387,7 +422,6 @@ def bootstrap_relevant_features(
         )
 
         # 2.3. Model training
-        # `np.ascontiguousarray` improves memory usage
         model = deepcopy(model)
         model.random_state = random_seed
         model.fit(
@@ -395,105 +429,80 @@ def bootstrap_relevant_features(
             np.ascontiguousarray(train_labels),
         )
 
-        # 2.4. Score on test set
+        # 2.4. Score on test set and verify predictions
         test_pred = model.predict(np.ascontiguousarray(test_data))
+
+        # Verify predictions include both classes
+        unique_pred = np.unique(test_pred)
+        unique_labels = np.unique(class_labels)
+        if not np.array_equal(np.sort(unique_pred), np.sort(unique_labels)):
+            logging.warning(
+                f"Iteration {iteration} produced different classes: "
+                f"expected {unique_labels}, got {unique_pred}. Skipping."
+            )
+            continue
+
         test_scores[random_seed].update(get_model_metrics(test_labels, test_pred))
 
-        # 2.5. Get SHAP values and interactions
-        try:
-            explainer = shapiq.Explainer(
-                model=model,
-                data=np.ascontiguousarray(test_data),
-                index="FSII",
+        # Get SHAP values
+        explainer = shap.TreeExplainer(model)
+
+        # Get raw SHAP values
+        shap_values = explainer.shap_values(counts_df)
+        shap_interaction_values = explainer.shap_interaction_values(counts_df)
+
+        # Handle class dimension in SHAP values (always pick positive class if present)
+        if shap_values.ndim == 3 and shap_values.shape[-1] == 2:
+            shap_values = shap_values[..., -1]  # Select positive class
+
+        if shap_interaction_values.ndim == 4 and shap_interaction_values.shape[-1] == 2:
+            shap_interaction_values = shap_interaction_values[..., -1]
+
+        # Verify final shapes
+        if shap_values.shape != (len(counts_df), counts_df.shape[1]):
+            raise ValueError(
+                f"SHAP values have wrong shape: {shap_values.shape}, "
+                f"expected ({len(counts_df)}, {counts_df.shape[1]})"
             )
 
-            # Process each order (1-5)
-            for order in range(1, 6):
-                try:
-                    # Get SHAP values for this iteration
-                    interactions = []
-                    for sample in np.ascontiguousarray(counts_df):
-                        shap_values = explainer.explain(sample).get_n_order_values(
-                            order
-                        )
-                        # Reshape to handle single-feature case
-                        if len(shap_values.shape) == 1:
-                            shap_values = shap_values.reshape(-1, 1)
-                        interactions.append(shap_values)
-                    interactions = np.stack(interactions)
+        if shap_interaction_values.shape != (
+            len(counts_df),
+            counts_df.shape[1],
+            counts_df.shape[1],
+        ):
+            raise ValueError(
+                f"SHAP interaction values have wrong shape: {shap_interaction_values.shape}, "
+                f"expected ({len(counts_df)}, {counts_df.shape[1]}, {counts_df.shape[1]})"
+            )
 
-                    # Update running average
-                    if n_successful == 0:
-                        shap_interactions_mean[order] = interactions
-                    else:
-                        shap_interactions_mean[order] = (
-                            shap_interactions_mean[order] * n_successful + interactions
-                        ) / (n_successful + 1)
-                except Exception as e:
-                    logging.warning(f"Order-{order} SHAP interactions failed: {e}")
+        # Update running averages
+        if iteration == 0:
+            shap_values_mean = shap_values
+            shap_interactions_mean = shap_interaction_values
+        else:
+            shap_values_mean = (shap_values_mean * iteration + shap_values) / (
+                iteration + 1
+            )
+            shap_interactions_mean = (
+                shap_interactions_mean * iteration + shap_interaction_values
+            ) / (iteration + 1)
 
-            n_successful += 1
-
-        except Exception as e:
-            logging.warning(f"SHAP computation failed: {e}")
-
-    return test_scores, shap_interactions_mean
+    return test_scores, ShapResults(shap_values_mean, shap_interactions_mean)
 
 
-def plot_interaction_heatmap(
-    interaction_values: np.ndarray,
-    feature_names: pd.Index,
-    max_features: int = 20,
-    figsize: Tuple[int, int] = (10, 8),
-    save_path: Optional[Path] = None,
-) -> None:
-    """Plot heatmap visualization of pairwise SHAP interaction values.
+def _sanitize_filename(text: str) -> str:
+    """Convert text to safe filename by replacing non-alphanumeric chars with underscore.
 
     Args:
-        interaction_values: Second order SHAP values [n_samples, n_features, n_features]
-        feature_names: Names corresponding to each feature index [n_features]
-        max_features: Maximum number of top features to display
-        figsize: Figure dimensions (width, height) in inches
-        save_path: Optional path to save plot file
+        text: Input text to sanitize
 
-    Notes:
-        - Features are selected based on total absolute interaction strength
-        - Uses RdBu colormap centered at 0
-        - If 3D array is provided, averages across samples first
+    Returns:
+        String with only alphanumeric characters and underscores
     """
-    # Average interactions across samples
-    mean_interactions = np.mean(interaction_values, axis=0)
-
-    # Get top features based on total interaction strength
-    total_interactions = np.sum(np.abs(mean_interactions), axis=(0, 1))
-    top_idx = np.argsort(total_interactions)[-max_features:]
-
-    # Create heatmap data
-    heatmap_data = pd.DataFrame(
-        mean_interactions[top_idx][:, top_idx],
-        index=feature_names[top_idx],
-        columns=feature_names[top_idx],
-    )
-
-    plt.figure(figsize=figsize)
-    plt.imshow(heatmap_data, cmap="RdBu")
-    plt.colorbar(label="SHAP interaction value")
-
-    # Add labels
-    plt.xticks(
-        range(len(heatmap_data.columns)), heatmap_data.columns, rotation=45, ha="right"
-    )
-    plt.yticks(range(len(heatmap_data.index)), heatmap_data.index)
-
-    plt.title("SHAP Feature Interactions")
-    plt.tight_layout()
-
-    if save_path:
-        plt.savefig(save_path)
-    plt.close()
+    return "".join(c if c.isalnum() else "_" for c in text)
 
 
-def create_first_order_shap_plots(
+def create_shap_plots(
     shap_values: np.ndarray,
     data_df: pd.DataFrame,
     feature_names: pd.Index,
@@ -501,131 +510,109 @@ def create_first_order_shap_plots(
     prefix: str,
     max_display: int = 30,
 ) -> Dict[str, bool]:
-    """Create various SHAP visualization plots with error handling.
+    """Create standard SHAP visualization plots.
 
     Args:
-        shap_values: First-order SHAP values [n_samples, n_features]
+        shap_values: SHAP values [n_samples, n_features]
         data_df: Original feature matrix [n_samples, n_features]
         feature_names: Names of features [n_features]
         save_path: Directory to save plots
         prefix: Prefix for plot filenames
-        max_display: Maximum number of features to display
+        max_display: Maximum number of features to display in summary plots
 
     Returns:
-        Dictionary mapping plot types to success status:
-        - 'bar': Feature importance bar plot
-        - 'beeswarm': SHAP value distributions
-        - 'dependence': Feature dependence plots (top 5)
-        - 'force_summary': Aggregated force plot
-        - 'interaction_overview': Feature interaction dot plot
+        Dictionary mapping plot types to success status
     """
     plot_results = {}
 
-    # 1. Bar plot
-    try:
-        shap.summary_plot(
-            shap_values,
-        )
-        plt.tight_layout()
-        plt.savefig(save_path.joinpath(f"{prefix}_bar.pdf"))
-        plt.close()
-        plot_results["bar"] = True
-    except Exception as e:
-        logging.error(f"Failed to create bar plot: {e}")
-        plot_results["bar"] = False
+    # Create subdirectory for dependence plots
+    dependence_dir = save_path.joinpath(f"{prefix}_dependence")
+    dependence_dir.mkdir(exist_ok=True, parents=True)
 
-    # 2. Beeswarm plot
+    # 1. Summary plots with same logic as before
     try:
+        # Violin plot
+        plt.figure(figsize=(10, 8))
         shap.summary_plot(
             shap_values,
             data_df,
             feature_names=feature_names,
             max_display=max_display,
+            plot_type="violin",
             show=False,
         )
         plt.tight_layout()
-        plt.savefig(save_path.joinpath(f"{prefix}_beeswarm.pdf"))
+        plt.savefig(save_path.joinpath(f"{prefix}_summary_violin.pdf"))
         plt.close()
-        plot_results["beeswarm"] = True
+
+        # Beeswarm plot
+        plt.figure(figsize=(10, 8))
+        shap.summary_plot(
+            shap_values,
+            data_df,
+            feature_names=feature_names,
+            max_display=max_display,
+            plot_type="dot",
+            show=False,
+        )
+        plt.tight_layout()
+        plt.savefig(save_path.joinpath(f"{prefix}_summary_beeswarm.pdf"))
+        plt.close()
+
+        plot_results["summary"] = True
     except Exception as e:
-        logging.error(f"Failed to create beeswarm plot: {e}")
-        plot_results["beeswarm"] = False
+        logging.error(f"Failed to create SHAP summary plots: {e}")
+        plot_results["summary"] = False
 
-    # 3. Dependence plots for top features
+    # 2. Pairwise dependence plots
     try:
-        mean_abs_shap = np.abs(shap_values).mean(axis=0)
-        top_features_idx = np.argsort(mean_abs_shap)[-5:]  # Top 5 features
+        n_features = data_df.shape[1]
+        if n_features <= 32:  # Only create if manageable number of features
+            feature_pairs_done = set()
+            for i in range(n_features):
+                for j in range(i + 1, n_features):  # Only upper triangle
+                    pair = tuple(sorted([feature_names[i], feature_names[j]]))
+                    if pair in feature_pairs_done:
+                        continue
 
-        for idx in top_features_idx:
-            feature_name = feature_names[idx]
-            shap.dependence_plot(
-                idx,
-                shap_values,
-                data_df,
-                feature_names=feature_names,
-                show=False,
-            )
-            plt.title(f"Dependence plot for {feature_name}")
-            plt.tight_layout()
-            plt.savefig(save_path.joinpath(f"{prefix}_dependence_{feature_name}.pdf"))
-            plt.close()
+                    plt.figure(figsize=(8, 6))
+                    shap.dependence_plot(
+                        i,
+                        shap_values,
+                        data_df,
+                        interaction_index=j,
+                        feature_names=feature_names,
+                        show=False,
+                    )
+                    plt.title(f"SHAP dependence: {pair[0]} vs {pair[1]}")
+                    plt.tight_layout()
+
+                    # Save using feature names in filename
+                    filename = f"{_sanitize_filename(pair[0])}_vs_{_sanitize_filename(pair[1])}.pdf"
+                    plt.savefig(dependence_dir.joinpath(filename))
+                    plt.close()
+
+                    feature_pairs_done.add(pair)
+
         plot_results["dependence"] = True
     except Exception as e:
         logging.error(f"Failed to create dependence plots: {e}")
         plot_results["dependence"] = False
 
-    # 4. Summary force plot
-    try:
-        shap_plots.force(
-            shap.Explanation(
-                values=shap_values.mean(axis=0),
-                base_values=np.zeros(1),
-                data=data_df.mean(axis=0),
-                feature_names=feature_names,
-            ),
-            show=False,
-            matplotlib=True,
-        )
-        plt.tight_layout()
-        plt.savefig(save_path.joinpath(f"{prefix}_force_summary.pdf"))
-        plt.close()
-        plot_results["force_summary"] = True
-    except Exception as e:
-        logging.error(f"Failed to create force summary plot: {e}")
-        plot_results["force_summary"] = False
-
-    # 5. Interaction overview heatmap
-    try:
-        shap.summary_plot(
-            shap_values,
-            data_df,
-            feature_names=feature_names,
-            plot_type="compact_dot",
-            max_display=max_display,
-            show=False,
-        )
-        plt.tight_layout()
-        plt.savefig(save_path.joinpath(f"{prefix}_interaction_overview.pdf"))
-        plt.close()
-        plot_results["interaction_overview"] = True
-    except Exception as e:
-        logging.error(f"Failed to create interaction overview plot: {e}")
-        plot_results["interaction_overview"] = False
-
     return plot_results
 
 
-def create_second_order_shap_plots(
+def create_interaction_plots(
     interaction_values: np.ndarray,
     feature_names: pd.Index,
     save_path: Path,
     prefix: str,
     max_display: int = 30,
 ) -> Dict[str, bool]:
-    """Create plots for second-order SHAP interaction values.
+    """Create visualization plots for SHAP interaction values.
 
     Args:
-        interaction_values: Second order SHAP values [n_samples, n_features, n_features]
+        interaction_values: SHAP interaction values [n_samples, n_features, n_features]
         feature_names: Names of features [n_features]
         save_path: Directory to save plots
         prefix: Prefix for plot filenames
@@ -633,73 +620,130 @@ def create_second_order_shap_plots(
 
     Returns:
         Dictionary mapping plot types to success status:
-        - 'interaction_heatmap': Pairwise interaction strength heatmap
-        - 'interaction_bar': Top features by total interaction strength
+            - 'matrix': Interaction strength matrix heatmap
+            - 'ranking': Bar plot of strongest pairwise interactions
+
+    Notes:
+        - Uses absolute values for interaction strengths
+        - Matrix shows top features based on total interaction strength
+        - Bar plot shows strongest individual pairwise interactions
+        - Colors use Blues colormap from white (weak) to dark blue (strong)
     """
     plot_results = {}
 
-    # 1. Standard interaction heatmap
+    # Average interaction values across samples and get absolute values
+    mean_interactions = np.abs(np.mean(interaction_values, axis=0))
+
+    # Make interaction matrix symmetric (average both directions)
+    mean_interactions = (mean_interactions + mean_interactions.T) / 2
+
+    # Remove self-interactions
+    np.fill_diagonal(mean_interactions, 0)
+
+    # 1. Complete interaction matrix heatmap
     try:
-        plot_interaction_heatmap(
-            interaction_values,
-            feature_names,
-            max_features=max_display,
-            save_path=save_path.joinpath(f"{prefix}_interaction_heatmap.pdf"),
+        plt.figure(figsize=(12, 10))
+        # Create custom colormap: white to blue for increasing absolute values
+        im = plt.imshow(
+            mean_interactions,
+            cmap=plt.cm.Blues,  # Use Blues colormap
+            norm=plt.Normalize(
+                vmin=0,  # Start from 0 since we're using absolute values
+                vmax=np.nanmax(mean_interactions),
+            ),
         )
-        plot_results["interaction_heatmap"] = True
-    except Exception as e:
-        logging.error(f"Failed to create interaction heatmap: {e}")
-        plot_results["interaction_heatmap"] = False
+        plt.colorbar(im, label="Mean |SHAP interaction value|")
 
-    # 2. Top interactions bar plot
-    try:
-        # Get total effect per feature by summing all its interactions
-        abs_interactions = np.abs(interaction_values)
-        # For [n_samples, n_features, n_features], sum over samples and pairs
-        total_effect = np.sum(abs_interactions, axis=(0, 2))
-        top_idx = np.argsort(total_effect)[-max_display:]
+        # Add all feature labels
+        plt.xticks(range(len(feature_names)), feature_names, rotation=45, ha="right")
+        plt.yticks(range(len(feature_names)), feature_names)
 
-        plt.figure(figsize=(10, 6))
-        plt.barh(range(len(top_idx)), total_effect[top_idx])
-        plt.yticks(range(len(top_idx)), feature_names[top_idx])
-        plt.xlabel("Total Interaction Strength")
-        plt.title("Top Feature Interaction Effects")
+        plt.title("Feature Interaction Matrix")
         plt.tight_layout()
-        plt.savefig(save_path.joinpath(f"{prefix}_top_interactions_bar.pdf"))
+        plt.savefig(save_path.joinpath(f"{prefix}_interactions_full.pdf"))
         plt.close()
-        plot_results["interaction_bar"] = True
+
+        # Also create a version with only top features if there are many
+        if len(feature_names) > max_display:
+            total_strength = np.sum(mean_interactions, axis=(0, 1))
+            top_idx = np.argsort(total_strength)[-max_display:]
+
+            plt.figure(figsize=(12, 10))
+            im = plt.imshow(
+                mean_interactions[top_idx][:, top_idx],
+                cmap=plt.cm.Blues,  # Use same colormap for consistency
+                norm=plt.Normalize(
+                    vmin=0,
+                    vmax=np.nanmax(mean_interactions),  # Use same scale as full matrix
+                ),
+            )
+            plt.colorbar(im, label="Mean |SHAP interaction value|")
+
+            plt.xticks(
+                range(len(top_idx)), feature_names[top_idx], rotation=45, ha="right"
+            )
+            plt.yticks(range(len(top_idx)), feature_names[top_idx])
+
+            plt.title(f"Top {max_display} Feature Interactions")
+            plt.tight_layout()
+            plt.savefig(save_path.joinpath(f"{prefix}_interactions_top.pdf"))
+            plt.close()
+
+        plot_results["matrix"] = True
     except Exception as e:
-        logging.error(f"Failed to create top interactions bar plot: {e}")
-        plot_results["interaction_bar"] = False
+        logging.error(f"Failed to create interaction matrix plots: {e}")
+        plot_results["matrix"] = False
+
+    # 2. Top unique interaction pairs
+    try:
+        # Get unique pairs of interactions (upper triangle only)
+        i_upper, j_upper = np.triu_indices_from(mean_interactions, k=1)
+        values = mean_interactions[i_upper, j_upper]
+
+        # Sort by strength and take top pairs
+        n_show = min(max_display, len(values))
+        top_indices = np.argsort(values)[-n_show:]
+
+        # Create feature pairs
+        pairs = [
+            f"{feature_names[i_upper[idx]]} × {feature_names[j_upper[idx]]}"
+            for idx in top_indices
+        ]
+        top_values = values[top_indices]
+
+        plt.figure(figsize=(10, 8))
+        plt.barh(range(len(top_values)), top_values)
+        plt.yticks(range(len(top_values)), pairs)
+        plt.xlabel("Mean |SHAP interaction value|")
+        plt.title("Strongest Feature Interactions")
+        plt.tight_layout()
+        plt.savefig(save_path.joinpath(f"{prefix}_interactions_ranking.pdf"))
+        plt.close()
+        plot_results["ranking"] = True
+    except Exception as e:
+        logging.error(f"Failed to create interaction ranking plot: {e}")
+        plot_results["ranking"] = False
 
     return plot_results
 
 
 def save_model_results(
-    shap_interactions: Dict[int, np.ndarray],
+    shap_results: ShapResults,
     test_scores: Dict[int, Dict[str, float]],
     data_df: pd.DataFrame,
     feature_annotations: pd.DataFrame,
     results_path: Path,
     prefix: str,
 ) -> None:
-    """Save all model results including SHAP values and performance metrics.
+    """Save model results including SHAP values and performance metrics.
 
     Args:
-        shap_interactions: Dict mapping order (1-5) to arrays with shapes:
-            - order 1: [n_samples, n_features]
-            - order 2: [n_samples, n_features, n_features]
-            - order 3: [n_samples, n_features, n_features, n_features]
-            etc.
+        shap_results: Container with SHAP values and interaction values
         test_scores: Dict mapping random seeds to metric scores
         data_df: Original feature matrix [n_samples, n_features]
         feature_annotations: DataFrame with gene annotations
         results_path: Directory to save results
         prefix: Prefix for output filenames
-
-    Outputs:
-        Per-sample values and summary statistics for each interaction order
-        See function docstring for complete file list
     """
     # Ensure indices match by converting both to strings
     feature_annotations.index = feature_annotations.index.astype(str)
@@ -711,57 +755,53 @@ def save_model_results(
     ]
     feature_names = valid_annotations["SYMBOL"]
 
-    # Save all interaction orders
-    for order, interaction_iterations in shap_interactions.items():
-        base_fname = f"{prefix}_shap_interactions_order_{order}"
+    # Save SHAP values
+    base_fname = f"{prefix}_shap"
 
-        if order == 1:  # First order SHAP values
-            print(interaction_iterations.shape, data_df.shape)
+    # First order SHAP values
+    pd.DataFrame(
+        shap_results.values,
+        index=data_df.index,
+        columns=data_df.columns.astype(str),
+    ).to_csv(results_path.joinpath(f"{base_fname}_values.csv"))
 
-            # Save raw per-sample SHAP values
-            pd.DataFrame(
-                interaction_iterations,
-                index=data_df.index,
-                columns=data_df.columns.astype(str),
-            ).to_csv(results_path.joinpath(f"{base_fname}_per_sample.csv"))
+    # Save feature-level summary statistics
+    summary_stats = pd.DataFrame(
+        {
+            "mean_abs_shap": np.abs(shap_results.values).mean(axis=0),
+            "std_abs_shap": np.abs(shap_results.values).std(axis=0),
+            "mean_shap": shap_results.values.mean(axis=0),
+            "std_shap": shap_results.values.std(axis=0),
+        },
+        index=data_df.columns.astype(str),
+    )
 
-            # Save feature-level summary statistics
-            summary_stats = pd.DataFrame(
-                {
-                    "mean_abs_shap": np.abs(interaction_iterations).mean(axis=0),
-                    "std_abs_shap": np.abs(interaction_iterations).std(axis=0),
-                    "mean_shap": interaction_iterations.mean(axis=0),
-                    "std_shap": interaction_iterations.std(axis=0),
-                },
-                index=data_df.columns.astype(str),
+    summary_df = pd.concat([summary_stats, feature_annotations], axis=1)
+    summary_df.sort_values("mean_abs_shap", ascending=False).to_csv(
+        results_path.joinpath(f"{base_fname}_summary.csv")
+    )
+
+    # Save filtered features at different thresholds
+    for shap_thr in (1e-03, 1e-04, 1e-05):
+        filtered_df = summary_df[summary_df["mean_abs_shap"] > shap_thr]
+        if not filtered_df.empty:
+            shap_thr_str = str(shap_thr).replace(".", "_")
+            filtered_df.to_csv(
+                results_path.joinpath(f"{base_fname}_filtered_{shap_thr_str}.csv")
             )
 
-            summary_df = pd.concat([summary_stats, feature_annotations], axis=1)
-            summary_df.sort_values("mean_abs_shap", ascending=False).to_csv(
-                results_path.joinpath(f"{base_fname}_summary.csv")
-            )
+    # Save interaction values
+    np.save(
+        results_path.joinpath(f"{base_fname}_interaction_values.npy"),
+        shap_results.interaction_values,
+    )
 
-            # Save filtered features at different thresholds
-            for shap_thr in (1e-03, 1e-04, 1e-05):
-                filtered_df = summary_df[summary_df["mean_abs_shap"] > shap_thr]
-                if not filtered_df.empty:
-                    shap_thr_str = str(shap_thr).replace(".", "_")
-                    filtered_df.to_csv(
-                        results_path.joinpath(
-                            f"{base_fname}_filtered_{shap_thr_str}.csv"
-                        )
-                    )
-
-        else:  # Higher order interactions
-            if order == 2:  # Second order gets special treatment
-                pd.DataFrame(
-                    interaction_iterations.mean(axis=0),  # Average across samples
-                    index=feature_names,
-                    columns=feature_names,
-                ).to_csv(results_path.joinpath(f"{base_fname}.csv"))
-
-            # Save raw arrays for all orders
-            np.save(results_path.joinpath(f"{base_fname}.npy"), interaction_iterations)
+    # Save interaction summary as DataFrame
+    pd.DataFrame(
+        shap_results.interaction_values.mean(axis=0),
+        index=feature_names,
+        columns=feature_names,
+    ).to_csv(results_path.joinpath(f"{base_fname}_interaction_summary.csv"))
 
     # Save performance metrics
     pd.DataFrame(test_scores).transpose().sort_values(
@@ -824,6 +864,7 @@ def bootstrap_training(
         custom_features_gene_type=custom_features_gene_type,
         exclude_features=exclude_features,
     )
+    _validate_binary_classification(class_labels)
 
     if overlapping_features.empty:
         logging.warning(
@@ -842,7 +883,7 @@ def bootstrap_training(
 
         classifier = get_classifier(classifier_name, random_seed, **params)
 
-    test_scores, shap_interactions = bootstrap_relevant_features(
+    test_scores, shap_results = bootstrap_relevant_features(
         counts_df=data_df,
         class_labels=class_labels,
         model=classifier,
@@ -861,13 +902,13 @@ def bootstrap_training(
     ]
 
     # Check if first order SHAP values need transposing
-    if shap_interactions[1].shape[0] != len(data_df.index):
-        shap_interactions[1] = shap_interactions[1].T
+    if shap_results.values.shape[0] != len(data_df.index):
+        shap_results.values = shap_results.values.T
 
     # 3.1. Save all results
     prefix = f"bootstrap_{bootstrap_iterations}"
     save_model_results(
-        shap_interactions=shap_interactions,
+        shap_results=shap_results,
         test_scores=test_scores,
         data_df=data_df,
         feature_annotations=custom_features.loc[data_df.columns.astype(str)],
@@ -878,16 +919,17 @@ def bootstrap_training(
     # 3.2. Create visualizations
     # First order SHAP plots
     try:
-        first_order_plots = create_first_order_shap_plots(
-            shap_values=shap_interactions[1],
+        shap_plots = create_shap_plots(
+            shap_values=shap_results.values,
             data_df=data_df,
             feature_names=feature_annotations["SYMBOL"],
             save_path=results_path,
-            prefix=f"{prefix}_first_order",
+            prefix=f"{prefix}_shap",
             max_display=30,
         )
         logging.info(
-            f"Successfully created {sum(first_order_plots.values())}/{len(first_order_plots)} "
+            "Successfully created "
+            f"{sum(shap_plots.values())}/{len(shap_plots)} "
             "first-order SHAP plots"
         )
     except Exception as e:
@@ -895,15 +937,16 @@ def bootstrap_training(
 
     # Second order SHAP plots
     try:
-        second_order_plots = create_second_order_shap_plots(
-            interaction_values=shap_interactions[2],
+        shap_interactions_plots = create_interaction_plots(
+            interaction_values=shap_results.interaction_values,
             feature_names=feature_annotations["SYMBOL"],
             save_path=results_path,
-            prefix=f"{prefix}_second_order",
+            prefix=f"{prefix}_shap_interactions",
             max_display=30,
         )
         logging.info(
-            f"Successfully created {sum(second_order_plots.values())}/{len(second_order_plots)} "
+            "Successfully created "
+            f"{sum(shap_interactions_plots.values())}/{len(shap_interactions_plots)} "
             "second-order SHAP plots"
         )
     except Exception as e:
