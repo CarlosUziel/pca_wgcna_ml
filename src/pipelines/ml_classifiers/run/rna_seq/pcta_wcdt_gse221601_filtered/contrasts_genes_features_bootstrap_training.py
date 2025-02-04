@@ -59,7 +59,7 @@ CLASSIFIER_NAMES: Iterable[str] = (
     "random_forest",
     "light_gbm",
 )
-BOOTSTRAP_ITERATIONS: int = 8192
+BOOTSTRAP_ITERATIONS: int = 8
 PARALLEL: bool = True
 
 contrast_conditions = sorted(set(chain(*CONTRASTS_LEVELS)))

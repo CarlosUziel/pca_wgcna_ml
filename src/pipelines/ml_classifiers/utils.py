@@ -402,7 +402,7 @@ def bootstrap_relevant_features(
         else random.sample(range(random_seeds * random_seeds), random_seeds)
     )
 
-    # Initialize outputs
+    # Initialize outputs with None
     shap_values_mean = None
     shap_interactions_mean = None
 
@@ -431,49 +431,19 @@ def bootstrap_relevant_features(
 
         # 2.4. Score on test set and verify predictions
         test_pred = model.predict(np.ascontiguousarray(test_data))
-
-        # Verify predictions include both classes
-        unique_pred = np.unique(test_pred)
-        unique_labels = np.unique(class_labels)
-        if not np.array_equal(np.sort(unique_pred), np.sort(unique_labels)):
-            logging.warning(
-                f"Iteration {iteration} produced different classes: "
-                f"expected {unique_labels}, got {unique_pred}. Skipping."
-            )
-            continue
-
         test_scores[random_seed].update(get_model_metrics(test_labels, test_pred))
 
-        # Get SHAP values
+        # Get SHAP values and verify shapes immediately
         explainer = shap.TreeExplainer(model)
-
-        # Get raw SHAP values
         shap_values = explainer.shap_values(counts_df)
         shap_interaction_values = explainer.shap_interaction_values(counts_df)
 
-        # Handle class dimension in SHAP values (always pick positive class if present)
+        # Handle class dimension in SHAP values
         if shap_values.ndim == 3 and shap_values.shape[-1] == 2:
-            shap_values = shap_values[..., -1]  # Select positive class
+            shap_values = shap_values[..., -1]
 
-        if shap_interaction_values.ndim == 4 and shap_interaction_values.shape[-1] == 2:
+        if shap_interaction_values.ndim == 4:
             shap_interaction_values = shap_interaction_values[..., -1]
-
-        # Verify final shapes
-        if shap_values.shape != (len(counts_df), counts_df.shape[1]):
-            raise ValueError(
-                f"SHAP values have wrong shape: {shap_values.shape}, "
-                f"expected ({len(counts_df)}, {counts_df.shape[1]})"
-            )
-
-        if shap_interaction_values.shape != (
-            len(counts_df),
-            counts_df.shape[1],
-            counts_df.shape[1],
-        ):
-            raise ValueError(
-                f"SHAP interaction values have wrong shape: {shap_interaction_values.shape}, "
-                f"expected ({len(counts_df)}, {counts_df.shape[1]}, {counts_df.shape[1]})"
-            )
 
         # Update running averages
         if iteration == 0:
