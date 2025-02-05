@@ -59,7 +59,7 @@ CLASSIFIER_NAMES: Iterable[str] = (
     "random_forest",
     "light_gbm",
 )
-BOOTSTRAP_ITERATIONS: int = 8
+BOOTSTRAP_ITERATIONS: int = 8192
 PARALLEL: bool = True
 
 contrast_conditions = sorted(set(chain(*CONTRASTS_LEVELS)))
@@ -116,7 +116,7 @@ for (test, control), classifier_name in product(CONTRASTS_LEVELS, CLASSIFIER_NAM
             custom_features=wgcna_ml_results_filt,
             custom_features_gene_type="ENTREZID",
             bootstrap_iterations=BOOTSTRAP_ITERATIONS,
-            n_jobs=4,
+            n_jobs=6,
             random_seed=8080,
         )
     )
