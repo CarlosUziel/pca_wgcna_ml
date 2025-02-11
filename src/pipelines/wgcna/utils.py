@@ -433,7 +433,7 @@ def differential_methylation(
     sft = pick_soft_threshold(
         meth_values_net,
         corFnc=correlation_type,
-        RsquaredCut=0.95, # TODO: decide between 0.8 (22 common genes) and 0.9
+        RsquaredCut=0.8,
         networkType=network_type,
         verbose=0,
     )
