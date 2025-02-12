@@ -87,8 +87,11 @@ input_collection = []
 for (test, control), classifier_name in product(CONTRASTS_LEVELS, CLASSIFIER_NAMES):
     exp_name = f"{exp_prefix}_{test}_vs_{control}_{results_prefix}"
 
-    annot_df_contrasts = deepcopy(
-        annot_df[annot_df[SAMPLE_CONTRAST_FACTOR].isin((test, control))]
+    annot_df_contrasts = pd.concat(
+        [
+            deepcopy(annot_df[annot_df[SAMPLE_CONTRAST_FACTOR] == control]),
+            deepcopy(annot_df[annot_df[SAMPLE_CONTRAST_FACTOR] == test]),
+        ]
     )
 
     input_collection.append(
