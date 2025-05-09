@@ -38,7 +38,7 @@
 
 ## About The Project
 
-This repository contains the code necessary to reproduce the results of *Identification of Biomarkers and Trajectories of Prostate Cancer Progression: A Bioinformatics Fusion of Weighted Correlation Network Analysis and Machine Learning*. See [publication](https://www.biorxiv.org/content/10.1101/2023.03.02.530740v2) for details.
+This repository contains the code necessary to reproduce the results of *Unravelling TPX2-centered co-expression networks as key drivers of aggressive prostate cancer*. See [publication](https://www.biorxiv.org/content/10.1101/2023.03.02.530740v2) for details.
 
 The implementation was done in Python (with extensive use of [*rpy2*](https://github.com/rpy2/rpy2) wrappers) and R.
 
