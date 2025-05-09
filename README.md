@@ -5,8 +5,7 @@
 <div align="center">
   <img src="docs/1_workflow.png" alt="Workflow diagram">
 
-  <h1 align="center">Identification of Biomarkers and Trajectories of Prostate Cancer Progression</h1>
-  <h4 align="center">A Bioinformatics Fusion of Weighted Correlation Network Analysis and Machine Learning</h4>
+  <h1 align="center">Unravelling TPX2-centered co-expression networks as key drivers of aggressive prostate cancer</h1>
 
 </div>
 
