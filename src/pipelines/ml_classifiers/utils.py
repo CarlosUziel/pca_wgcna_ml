@@ -169,6 +169,7 @@ def hparams_tuning(
     hparams_grid_file: Path,
     contrasts_levels_colors: Dict[str, str],
     results_path: Path,
+    label_map: Dict[str, int],
     custom_features: Optional[pd.DataFrame] = None,
     custom_features_gene_type: Optional[str] = "ENTREZID",
     exclude_features: Optional[Iterable[str]] = None,
@@ -186,6 +187,7 @@ def hparams_tuning(
         hparams_grid_file: JSON file containing parameter grid for GridSearchCV
         contrasts_levels_colors: Mapping of class labels to colors for plots
         results_path: Directory to save results (models, plots, metrics)
+        label_map: Mapping of label strings to integer IDs
         custom_features: DataFrame with gene annotations having ENTREZID as index
         custom_features_gene_type: Type of gene IDs in custom_features index
         exclude_features: Features to exclude from analysis
@@ -204,29 +206,21 @@ def hparams_tuning(
     ####################################################################################
     # 1. Data
     # 1.1. Get pre-processed data, class labels and overlapping features
-    data_df, class_labels, overlapping_features, data_df_ranges = (
+    data_df, class_labels, overlapping_features, data_df_ranges, _ = (
         process_gene_count_data(
             counts=data,
             annot_df=annot_df,
             contrast_factor=contrast_factor,
             org_db=org_db,
+            label_map=label_map,
             custom_features=custom_features,
             custom_features_gene_type=custom_features_gene_type,
             exclude_features=exclude_features,
         )
     )
     # Save label id to string mapping for reproducibility
-    label_mapping = {
-        int(idx): str(label)
-        for idx, label in enumerate(
-            sorted(
-                set(annot_df[contrast_factor]),
-                key=list(annot_df[contrast_factor]).index,
-            )
-        )
-    }
     with results_path.joinpath("label_mapping.json").open("w") as fh:
-        json.dump(label_mapping, fh, indent=4)
+        json.dump(label_map, fh, indent=4)
     _validate_binary_classification(class_labels)
 
     if overlapping_features.empty:
@@ -492,7 +486,11 @@ def bootstrap_relevant_features(
         # Handle class dimension in SHAP values
         if isinstance(shap_values, list) and len(shap_values) == 2:
             shap_values = shap_values[1]  # Select SHAP values for the positive class
-        elif isinstance(shap_values, np.ndarray) and shap_values.ndim == 3 and shap_values.shape[2] == 2:
+        elif (
+            isinstance(shap_values, np.ndarray)
+            and shap_values.ndim == 3
+            and shap_values.shape[2] == 2
+        ):
             shap_values = shap_values[:, :, 1]  # Select positive class
 
         if (
@@ -502,8 +500,14 @@ def bootstrap_relevant_features(
             shap_interaction_values = shap_interaction_values[
                 1
             ]  # Select SHAP values for the positive class
-        elif isinstance(shap_interaction_values, np.ndarray) and shap_interaction_values.ndim == 4 and shap_interaction_values.shape[3] == 2:
-            shap_interaction_values = shap_interaction_values[:, :, :, 1]  # Select positive class
+        elif (
+            isinstance(shap_interaction_values, np.ndarray)
+            and shap_interaction_values.ndim == 4
+            and shap_interaction_values.shape[3] == 2
+        ):
+            shap_interaction_values = shap_interaction_values[
+                :, :, :, 1
+            ]  # Select positive class
 
         # Verify shapes after handling class dimension
         assert isinstance(shap_values, np.ndarray), (
@@ -876,6 +880,7 @@ def bootstrap_training(
     classifier_name: str,
     hparams_file: Path,
     results_path: Path,
+    label_map: Dict[str, int],
     custom_features: Optional[pd.DataFrame] = None,
     custom_features_gene_type: Optional[str] = "ENTREZID",
     exclude_features: Optional[Iterable[str]] = None,
@@ -893,6 +898,7 @@ def bootstrap_training(
         classifier_name: Name of the classifier to use
         hparams_file: JSON file containing best parameters from tuning
         results_path: Directory to save results
+        label_map: Mapping of label strings to integer IDs
         custom_features: DataFrame with gene annotations having ENTREZID as index
                        and SYMBOL, GENENAME, GENETYPE as columns
         exclude_features: Features to remove from data
@@ -914,15 +920,19 @@ def bootstrap_training(
     ####################################################################################
     # 1. Data
     # 1.1. Get pre-processed data, class labels and overlapping features
-    data_df, class_labels, overlapping_features, _ = process_gene_count_data(
+    data_df, class_labels, overlapping_features, _, _ = process_gene_count_data(
         counts=data,
         annot_df=annot_df,
         contrast_factor=contrast_factor,
         org_db=org_db,
+        label_map=label_map,
         custom_features=custom_features,
         custom_features_gene_type=custom_features_gene_type,
         exclude_features=exclude_features,
     )
+    # Save label id to string mapping for reproducibility
+    with results_path.joinpath("label_mapping.json").open("w") as fh:
+        json.dump(label_map, fh, indent=4)
     _validate_binary_classification(class_labels)
 
     if overlapping_features.empty:

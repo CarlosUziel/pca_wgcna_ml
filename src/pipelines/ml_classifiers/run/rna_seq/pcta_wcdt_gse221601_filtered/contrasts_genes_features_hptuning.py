@@ -104,6 +104,10 @@ for (test, control), classifier_name in product(CONTRASTS_LEVELS, CLASSIFIER_NAM
             data=(DESEQ2_ROOT.joinpath(f"{exp_prefix}_vst.csv")),
             annot_df=annot_df_contrasts,
             contrast_factor=SAMPLE_CONTRAST_FACTOR,
+            label_map={
+                control: 0,
+                test: 1,
+            },
             org_db=org_db,
             classifier_name=classifier_name,
             hparams_grid_file=(
