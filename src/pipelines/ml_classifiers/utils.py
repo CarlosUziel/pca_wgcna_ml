@@ -4,17 +4,16 @@ import pickle
 import random
 import warnings
 from collections import defaultdict
-from copy import deepcopy
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Iterable, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
-import rpy2.robjects as ro
 import shap
 from lightgbm import LGBMClassifier
 from matplotlib import pyplot as plt
+from matplotlib.colors import Normalize
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import (
     balanced_accuracy_score,
@@ -31,7 +30,8 @@ from xgboost import XGBClassifier
 
 from components.functional_analysis.orgdb import OrgDB
 from data.ml import process_gene_count_data
-from r_wrappers.complex_heatmaps import complex_heatmap, heatmap_annotation
+
+# from r_wrappers.complex_heatmaps import complex_heatmap, heatmap_annotation
 
 warnings.filterwarnings(
     "ignore", message="No further splits with positive gain", category=UserWarning
@@ -65,7 +65,13 @@ def get_best_cv_indx(cv_results: Dict[str, np.ndarray]) -> int:
 def get_classifier(
     classifier_name: str, random_seed: int, n_jobs: int = 1, **kwargs
 ) -> Union[
-    RandomForestClassifier, DecisionTreeClassifier, XGBClassifier, LGBMClassifier
+    RandomForestClassifier,
+    DecisionTreeClassifier,
+    XGBClassifier,
+    LGBMClassifier,
+    NuSVC,
+    MLPClassifier,
+    TabPFNClassifier,
 ]:
     """Create and configure a tree-based classifier instance for binary classification.
 
@@ -108,6 +114,7 @@ def get_classifier(
         params.setdefault("device", "cpu")
         return XGBClassifier(**params)
     elif classifier_name == "nu_svc":
+        params.setdefault("probability", True)
         return NuSVC(**params)
     elif classifier_name == "mlp":
         return MLPClassifier(**params)
@@ -129,10 +136,10 @@ def get_model_metrics(y_true: np.ndarray, y_pred: np.ndarray) -> Dict[str, float
         Dictionary of metric names to values
     """
     return {
-        "precision": precision_score(y_true, y_pred, average="binary"),
-        "recall": recall_score(y_true, y_pred, average="binary"),
-        "f1": f1_score(y_true, y_pred, average="binary"),
-        "balanced_accuracy": balanced_accuracy_score(y_true, y_pred),
+        "precision": float(precision_score(y_true, y_pred, average="binary")),
+        "recall": float(recall_score(y_true, y_pred, average="binary")),
+        "f1": float(f1_score(y_true, y_pred, average="binary")),
+        "balanced_accuracy": float(balanced_accuracy_score(y_true, y_pred)),
     }
 
 
@@ -197,7 +204,7 @@ def hparams_tuning(
     ####################################################################################
     # 1. Data
     # 1.1. Get pre-processed data, class labels and overlapping features
-    data_df, class_labels, overlapping_features, data_df_ranges, _ = (
+    data_df, class_labels, overlapping_features, data_df_ranges = (
         process_gene_count_data(
             counts=data,
             annot_df=annot_df,
@@ -208,6 +215,18 @@ def hparams_tuning(
             exclude_features=exclude_features,
         )
     )
+    # Save label id to string mapping for reproducibility
+    label_mapping = {
+        int(idx): str(label)
+        for idx, label in enumerate(
+            sorted(
+                set(annot_df[contrast_factor]),
+                key=list(annot_df[contrast_factor]).index,
+            )
+        )
+    }
+    with results_path.joinpath("label_mapping.json").open("w") as fh:
+        json.dump(label_mapping, fh, indent=4)
     _validate_binary_classification(class_labels)
 
     if overlapping_features.empty:
@@ -268,43 +287,61 @@ def hparams_tuning(
     annot_df.to_csv(results_path.joinpath("annot_data.csv"))
 
     # 3.2. Save genes without overlap and plot heatmap
-    non_overlapping_features = overlapping_features[~overlapping_features]
-    if not non_overlapping_features.empty:
-        non_overlapping_features_df = custom_features[
-            custom_features.index.isin(non_overlapping_features.index.astype(str))
-        ]
+    # non_overlapping_features = overlapping_features[~overlapping_features]
+    # if not non_overlapping_features.empty and custom_features is not None:
+    #     non_overlapping_features_df = custom_features[
+    #         custom_features.index.isin(non_overlapping_features.index.astype(str))
+    #     ]
 
-        counts_matrix = pd.read_csv(data, index_col=0).loc[
-            non_overlapping_features_df.index,
-            data_df.index,
-        ]
+    #     if isinstance(data, Path):
+    #         counts_matrix_full = pd.read_csv(data, index_col=0)
+    #     else:
+    #         counts_matrix_full = data.copy()
 
-        # substract row means for better visualization
-        counts_matrix = counts_matrix.sub(counts_matrix.mean(axis=1), axis=0)
+    #     # Ensure indices are strings for consistent matching
+    #     counts_matrix_full.index = counts_matrix_full.index.astype(str)
+    #     counts_matrix_full.columns = counts_matrix_full.columns.astype(str)
+    #     non_overlapping_features_df.index = non_overlapping_features_df.index.astype(
+    #         str
+    #     )
+    #     data_df.index = data_df.index.astype(str)
 
-        ha_column = heatmap_annotation(
-            df=annot_df[[contrast_factor]],
-            col={contrast_factor: contrasts_levels_colors},
-        )
+    #     row_indexer = non_overlapping_features_df.index.intersection(
+    #         counts_matrix_full.index
+    #     ).tolist()
+    #     col_indexer = data_df.index.intersection(counts_matrix_full.columns).tolist()
 
-        complex_heatmap(
-            counts_matrix,
-            save_path=results_path.joinpath("non_overlapping_features_clustering.pdf"),
-            width=10,
-            height=10,
-            name="Non-overlapping genes",
-            column_title=f"Features (N={len(counts_matrix)})",
-            top_annotation=ha_column,
-            show_row_names=False,
-            show_column_names=False,
-            cluster_columns=False,
-            heatmap_legend_param=ro.r(
-                'list(title_position = "topcenter", '
-                'color_bar = "continuous", '
-                'legend_height = unit(5, "cm"), '
-                'legend_direction = "horizontal")'
-            ),
-        )
+    #     counts_matrix = counts_matrix_full.loc[row_indexer, col_indexer]
+
+    #     substract row means for better visualization
+    #     if not counts_matrix.empty:
+    #         counts_matrix = counts_matrix.sub(counts_matrix.mean(axis=1), axis=0)
+
+    #         ha_column = heatmap_annotation(
+    #             df=annot_df[[contrast_factor]],
+    #             col={contrast_factor: contrasts_levels_colors},
+    #         )
+
+    #         complex_heatmap(
+    #             counts_matrix,
+    #             save_path=results_path.joinpath(
+    #                 "non_overlapping_features_clustering.pdf"
+    #             ),
+    #             width=10,
+    #             height=10,
+    #             name="Non-overlapping genes",
+    #             column_title=f"Features (N={len(counts_matrix)})",
+    #             top_annotation=ha_column,
+    #             show_row_names=False,
+    #             show_column_names=False,
+    #             cluster_columns=False,
+    #             heatmap_legend_param=ro.r(
+    #                 'list(title_position = "topcenter", '
+    #                 'color_bar = "continuous", '
+    #                 'legend_height = unit(5, "cm"), '
+    #                 'legend_direction = "horizontal")'
+    #             ),
+    #         )
 
     # 3.3. Save gene counts ranges
     data_df_ranges.to_csv(results_path.joinpath("data_ranges.csv"))
@@ -351,21 +388,20 @@ class ShapResults:
 def bootstrap_relevant_features(
     counts_df: pd.DataFrame,
     class_labels: np.ndarray,
-    model: Union[
-        RandomForestClassifier,
-        DecisionTreeClassifier,
-        XGBClassifier,
-        LGBMClassifier,
-    ],
+    classifier_name: str,
+    model_params: Dict,
     random_seeds: Union[int, Iterable[int]] = 100,
+    n_jobs: int = 1,
 ) -> Tuple[Dict[int, Dict[str, float]], ShapResults]:
     """Train a tree-based model multiple times to compute SHAP values and interactions.
 
     Args:
         counts_df: Input feature matrix [n_samples, n_features]
         class_labels: Binary class labels [n_samples], must contain exactly 2 unique values
-        model: Pre-configured tree-based classifier instance with predict_proba support
+        classifier_name: Name of the classifier to use.
+        model_params: Parameters for the classifier.
         random_seeds: Number of iterations or list of random seeds to use
+        n_jobs: Number of parallel jobs for supported classifiers.
 
     Returns:
         Tuple containing:
@@ -386,28 +422,21 @@ def bootstrap_relevant_features(
     # 0. Setup and validation
     _validate_binary_classification(class_labels)
 
-    # Validate model type and binary classification capability
-    if not hasattr(model, "predict_proba"):
-        raise ValueError(
-            f"Model {model.__class__.__name__} must support probability predictions "
-            "for SHAP values"
-        )
-
     test_scores = defaultdict(dict)
 
     # 1. Choose random_seeds
-    random_seeds = (
-        random_seeds
-        if isinstance(random_seeds, list)
-        else random.sample(range(random_seeds * random_seeds), random_seeds)
-    )
+    seeds: Iterable[int]
+    if isinstance(random_seeds, int):
+        seeds = random.sample(range(random_seeds * 10), random_seeds)
+    else:
+        seeds = random_seeds
 
     # Initialize outputs with None
     shap_values_mean = None
     shap_interactions_mean = None
 
     # 2. Bootstrap training
-    for iteration, random_seed in enumerate(random_seeds):
+    for iteration, random_seed in enumerate(seeds):
         # 2.1. Set seeds
         random.seed(random_seed)
         np.random.seed(random_seed)
@@ -422,34 +451,82 @@ def bootstrap_relevant_features(
         )
 
         # 2.3. Model training
-        model = deepcopy(model)
-        model.random_state = random_seed
-        model.fit(
+        model_params = dict(model_params)
+        model_params.pop("n_jobs", None)
+        current_model = get_classifier(
+            classifier_name, random_seed, n_jobs, **model_params
+        )
+        if not hasattr(current_model, "predict_proba"):
+            raise ValueError(
+                f"Model {current_model.__class__.__name__} must support probability "
+                "predictions for SHAP values"
+            )
+
+        current_model.fit(
             np.ascontiguousarray(train_data),
             np.ascontiguousarray(train_labels),
         )
 
         # 2.4. Score on test set and verify predictions
-        test_pred = model.predict(np.ascontiguousarray(test_data))
+        test_pred = current_model.predict(np.ascontiguousarray(test_data))
         test_scores[random_seed].update(get_model_metrics(test_labels, test_pred))
 
+        # Use training data as background for SHAP
+        background = (
+            train_data
+            if len(train_data) <= 1000
+            else train_data.sample(1000, random_state=random_seed)
+        )
+
         # Get SHAP values and verify shapes immediately
-        explainer = shap.TreeExplainer(model)
+        # Use probability output for main SHAP values
+        explainer = shap.TreeExplainer(
+            current_model, data=background, model_output="probability"
+        )
         shap_values = explainer.shap_values(counts_df)
-        shap_interaction_values = explainer.shap_interaction_values(counts_df)
+
+        # Use raw output for SHAP interaction values (required by SHAP)
+        explainer_inter = shap.TreeExplainer(current_model, model_output="raw")
+        shap_interaction_values = explainer_inter.shap_interaction_values(counts_df)
 
         # Handle class dimension in SHAP values
-        if shap_values.ndim == 3 and shap_values.shape[-1] == 2:
-            shap_values = shap_values[..., -1]
+        if isinstance(shap_values, list) and len(shap_values) == 2:
+            shap_values = shap_values[1]  # Select SHAP values for the positive class
+        elif isinstance(shap_values, np.ndarray) and shap_values.ndim == 3 and shap_values.shape[2] == 2:
+            shap_values = shap_values[:, :, 1]  # Select positive class
 
-        if shap_interaction_values.ndim == 4:
-            shap_interaction_values = shap_interaction_values[..., -1]
+        if (
+            isinstance(shap_interaction_values, list)
+            and len(shap_interaction_values) == 2
+        ):
+            shap_interaction_values = shap_interaction_values[
+                1
+            ]  # Select SHAP values for the positive class
+        elif isinstance(shap_interaction_values, np.ndarray) and shap_interaction_values.ndim == 4 and shap_interaction_values.shape[3] == 2:
+            shap_interaction_values = shap_interaction_values[:, :, :, 1]  # Select positive class
+
+        # Verify shapes after handling class dimension
+        assert isinstance(shap_values, np.ndarray), (
+            "SHAP values should be a numpy array"
+        )
+        assert shap_values.ndim == 2, (
+            f"Unexpected SHAP values shape: {shap_values.shape}"
+        )
+        assert isinstance(shap_interaction_values, np.ndarray), (
+            "SHAP interaction values should be a numpy array"
+        )
+        assert shap_interaction_values.ndim == 3, (
+            f"Unexpected SHAP interaction values shape: {shap_interaction_values.shape}"
+        )
 
         # Update running averages
         if iteration == 0:
             shap_values_mean = shap_values
             shap_interactions_mean = shap_interaction_values
         else:
+            assert (
+                shap_values_mean is not None and shap_interactions_mean is not None
+            ), "Mean SHAP values should have been initialized"
             shap_values_mean = (shap_values_mean * iteration + shap_values) / (
                 iteration + 1
             )
@@ -457,6 +534,9 @@ def bootstrap_relevant_features(
                 shap_interactions_mean * iteration + shap_interaction_values
             ) / (iteration + 1)
 
+    assert shap_values_mean is not None and shap_interactions_mean is not None, (
+        "Mean SHAP values were not computed"
+    )
     return test_scores, ShapResults(shap_values_mean, shap_interactions_mean)
 
 
@@ -475,7 +555,7 @@ def _sanitize_filename(text: str) -> str:
 def create_shap_plots(
     shap_values: np.ndarray,
     data_df: pd.DataFrame,
-    feature_names: pd.Index,
+    feature_names: pd.Series,
     save_path: Path,
     prefix: str,
     max_display: int = 30,
@@ -506,7 +586,7 @@ def create_shap_plots(
         shap.summary_plot(
             shap_values,
             data_df,
-            feature_names=feature_names,
+            feature_names=feature_names.tolist(),
             max_display=max_display,
             plot_type="violin",
             show=False,
@@ -520,7 +600,7 @@ def create_shap_plots(
         shap.summary_plot(
             shap_values,
             data_df,
-            feature_names=feature_names,
+            feature_names=feature_names.tolist(),
             max_display=max_display,
             plot_type="dot",
             show=False,
@@ -541,7 +621,7 @@ def create_shap_plots(
             feature_pairs_done = set()
             for i in range(n_features):
                 for j in range(i + 1, n_features):  # Only upper triangle
-                    pair = tuple(sorted([feature_names[i], feature_names[j]]))
+                    pair = tuple(sorted([feature_names.iloc[i], feature_names.iloc[j]]))
                     if pair in feature_pairs_done:
                         continue
 
@@ -551,7 +631,7 @@ def create_shap_plots(
                         shap_values,
                         data_df,
                         interaction_index=j,
-                        feature_names=feature_names,
+                        feature_names=feature_names.tolist(),
                         show=False,
                     )
                     plt.title(f"SHAP dependence: {pair[0]} vs {pair[1]}")
@@ -574,7 +654,7 @@ def create_shap_plots(
 
 def create_interaction_plots(
     interaction_values: np.ndarray,
-    feature_names: pd.Index,
+    feature_names: pd.Series,
     save_path: Path,
     prefix: str,
     max_display: int = 30,
@@ -616,8 +696,8 @@ def create_interaction_plots(
         # Create custom colormap: white to blue for increasing absolute values
         im = plt.imshow(
             mean_interactions,
-            cmap=plt.cm.Blues,  # Use Blues colormap
-            norm=plt.Normalize(
+            cmap="Blues",  # Use Blues colormap
+            norm=Normalize(
                 vmin=0,  # Start from 0 since we're using absolute values
                 vmax=np.nanmax(mean_interactions),
             ),
@@ -625,8 +705,13 @@ def create_interaction_plots(
         plt.colorbar(im, label="Mean |SHAP interaction value|")
 
         # Add all feature labels
-        plt.xticks(range(len(feature_names)), feature_names, rotation=45, ha="right")
-        plt.yticks(range(len(feature_names)), feature_names)
+        plt.xticks(
+            range(len(feature_names)),
+            feature_names.tolist(),
+            rotation=45,
+            ha="right",
+        )
+        plt.yticks(range(len(feature_names)), feature_names.tolist())
 
         plt.title("Feature Interaction Matrix")
         plt.tight_layout()
@@ -635,14 +720,14 @@ def create_interaction_plots(
 
         # Also create a version with only top features if there are many
         if len(feature_names) > max_display:
-            total_strength = np.sum(mean_interactions, axis=(0, 1))
+            total_strength = np.sum(mean_interactions, axis=1)
             top_idx = np.argsort(total_strength)[-max_display:]
 
             plt.figure(figsize=(12, 10))
             im = plt.imshow(
                 mean_interactions[top_idx][:, top_idx],
-                cmap=plt.cm.Blues,  # Use same colormap for consistency
-                norm=plt.Normalize(
+                cmap="Blues",  # Use same colormap for consistency
+                norm=Normalize(
                     vmin=0,
                     vmax=np.nanmax(mean_interactions),  # Use same scale as full matrix
                 ),
@@ -650,9 +735,12 @@ def create_interaction_plots(
             plt.colorbar(im, label="Mean |SHAP interaction value|")
 
             plt.xticks(
-                range(len(top_idx)), feature_names[top_idx], rotation=45, ha="right"
+                range(len(top_idx)),
+                feature_names.iloc[top_idx].tolist(),
+                rotation=45,
+                ha="right",
             )
-            plt.yticks(range(len(top_idx)), feature_names[top_idx])
+            plt.yticks(range(len(top_idx)), feature_names.iloc[top_idx].tolist())
 
             plt.title(f"Top {max_display} Feature Interactions")
             plt.tight_layout()
@@ -676,7 +764,7 @@ def create_interaction_plots(
 
         # Create feature pairs
         pairs = [
-            f"{feature_names[i_upper[idx]]} × {feature_names[j_upper[idx]]}"
+            f"{feature_names.iloc[i_upper[idx]]} × {feature_names.iloc[j_upper[idx]]}"
             for idx in top_indices
         ]
         top_values = values[top_indices]
@@ -716,7 +804,8 @@ def save_model_results(
         prefix: Prefix for output filenames
     """
     # Ensure indices match by converting both to strings
-    feature_annotations.index = feature_annotations.index.astype(str)
+    if feature_annotations is not None:
+        feature_annotations.index = feature_annotations.index.astype(str)
     data_df_columns = data_df.columns.astype(str)
 
     # Get annotations only for features present in data
@@ -825,7 +914,7 @@ def bootstrap_training(
     ####################################################################################
     # 1. Data
     # 1.1. Get pre-processed data, class labels and overlapping features
-    data_df, class_labels, overlapping_features, _, _ = process_gene_count_data(
+    data_df, class_labels, overlapping_features, _ = process_gene_count_data(
         counts=data,
         annot_df=annot_df,
         contrast_factor=contrast_factor,
@@ -851,13 +940,13 @@ def bootstrap_training(
         if classifier_name in ["random_forest", "light_gbm", "xgboost"]:
             params.setdefault("n_jobs", n_jobs)
 
-        classifier = get_classifier(classifier_name, random_seed, **params)
-
     test_scores, shap_results = bootstrap_relevant_features(
         counts_df=data_df,
         class_labels=class_labels,
-        model=classifier,
+        classifier_name=classifier_name,
+        model_params=params,
         random_seeds=bootstrap_iterations,
+        n_jobs=n_jobs,
     )
 
     ####################################################################################
@@ -865,11 +954,17 @@ def bootstrap_training(
     results_path.mkdir(exist_ok=True, parents=True)
 
     # Ensure indices match
-    custom_features.index = custom_features.index.astype(str)
+    if custom_features is not None:
+        custom_features.index = custom_features.index.astype(str)
     data_columns = data_df.columns.astype(str)
-    feature_annotations = custom_features.loc[
-        custom_features.index.intersection(data_columns)
-    ]
+
+    if custom_features is not None:
+        feature_annotations = custom_features.loc[
+            custom_features.index.intersection(data_columns)
+        ]
+    else:
+        feature_annotations = pd.DataFrame(index=data_columns)
+        feature_annotations["SYMBOL"] = data_columns
 
     # Check if first order SHAP values need transposing
     if shap_results.values.shape[0] != len(data_df.index):
@@ -881,7 +976,7 @@ def bootstrap_training(
         shap_results=shap_results,
         test_scores=test_scores,
         data_df=data_df,
-        feature_annotations=custom_features.loc[data_df.columns.astype(str)],
+        feature_annotations=feature_annotations,
         results_path=results_path,
         prefix=prefix,
     )

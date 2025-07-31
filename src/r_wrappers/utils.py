@@ -16,7 +16,6 @@ from rpy2.robjects.packages import importr
 from components.functional_analysis.orgdb import OrgDB
 
 r_annotation_dbi = importr("AnnotationDbi")
-r_pdist = importr("parallelDist")
 r_utils = importr("utils")
 r_genomic_ranges = importr("GenomicRanges")
 
@@ -128,6 +127,7 @@ def sample_distance(data: Any):
          data: can be a DESeqDataSet or a DESeqTransform (from rlog or vst
             transforms)
     """
+    r_pdist = importr("parallelDist")
     return r_pdist.parDist(ro.r("t")(ro.r("assay")(data)))
 
 

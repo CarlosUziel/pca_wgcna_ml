@@ -10,9 +10,6 @@ from sklearn import preprocessing
 
 from components.functional_analysis.orgdb import OrgDB
 from data.utils import filter_genes_wrt_annotation, get_overlapping_features
-from r_wrappers.deseq2 import vst_transform
-from r_wrappers.gsva import gsva
-from r_wrappers.msigdb import get_msigb_gene_sets
 from r_wrappers.utils import map_gene_id, pd_df_to_rpy2_df, rpy2_df_to_pd_df
 
 
@@ -42,9 +39,7 @@ def process_gene_count_data(
     custom_features: Optional[pd.DataFrame] = None,
     custom_features_gene_type: Optional[str] = "ENTREZID",
     exclude_features: Optional[Iterable[str]] = None,
-) -> Tuple[
-    pd.DataFrame, np.ndarray, pd.Series, pd.DataFrame, preprocessing.LabelEncoder
-]:
+) -> Tuple[pd.DataFrame, np.ndarray, pd.Series, pd.DataFrame]:
     """Process gene expression data for machine learning analysis.
 
     Args:
@@ -62,7 +57,6 @@ def process_gene_count_data(
         - Array of encoded class labels
         - Boolean Series indicating which genes had overlapping expression ranges
         - DataFrame with original value ranges per gene per class
-        - Fitted LabelEncoder for mapping class labels to integers
 
     Raises:
         AssertionError: If counts or annotations are empty
@@ -82,8 +76,10 @@ def process_gene_count_data(
 
     # 1.3. Build class labels and validate binary classification
     _validate_binary_classes(annot_df[contrast_factor])
-    label_encoder = preprocessing.LabelEncoder()
-    class_labels = label_encoder.fit_transform(annot_df[contrast_factor])
+    # Ensure first label is 0, second is 1, by order of appearance
+    unique_labels = list(dict.fromkeys(annot_df[contrast_factor]))
+    label_map = {label: idx for idx, label in enumerate(unique_labels)}
+    class_labels = annot_df[contrast_factor].map(label_map).values
 
     # 2. Gene selection
     # 2.1. Map genes in counts_df to ENTREZID
@@ -120,11 +116,11 @@ def process_gene_count_data(
     # 3. Remove non-overlapping genes
     class_sample_groups = [
         annot_df[annot_df[contrast_factor] == class_label].index
-        for class_label in label_encoder.classes_
+        for class_label in unique_labels
     ]
 
     overlapping_genes, counts_df_ranges = get_overlapping_features(
-        counts_df, class_sample_groups, class_names=label_encoder.classes_
+        counts_df, class_sample_groups, class_names=unique_labels
     )
 
     counts_df = counts_df.loc[:, overlapping_genes]
@@ -136,7 +132,7 @@ def process_gene_count_data(
         columns=counts_df.columns,
     )
 
-    return counts_df, class_labels, overlapping_genes, counts_df_ranges, label_encoder
+    return counts_df, class_labels, overlapping_genes, counts_df_ranges
 
 
 def get_gene_set_expression_data(
@@ -243,6 +239,8 @@ def get_gene_set_expression_data(
     counts_df = counts_df.loc[counts_df.index.dropna().drop_duplicates(keep=False)]
 
     # 3. Get gene-set by samples matrix
+    from r_wrappers.deseq2 import vst_transform
+
     vst_df = rpy2_df_to_pd_df(
         vst_transform(
             ro.r("as.matrix")(
@@ -250,6 +248,9 @@ def get_gene_set_expression_data(
             )
         )
     )
+    from r_wrappers.gsva import gsva
+    from r_wrappers.msigdb import get_msigb_gene_sets
+
     gene_sets_df = gsva(
         vst_df,
         get_msigb_gene_sets(
